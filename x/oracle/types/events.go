@@ -30,5 +30,5 @@ const (
 	AttributeValueNativeTokenDeposit   = "deposit"
 	AttributeValueNativeTokenWithdraw  = "withdraw"
 	AttributeValueMissingReportPrice   = "missing_report_price"
-	AttributeValueMaliciousReportPrice = "missing_report_price"
+	AttributeValueMaliciousReportPrice = "malicious_report_price"
 )
