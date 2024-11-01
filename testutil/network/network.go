@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -52,6 +53,8 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/evmos/evmos/v16/crypto/hd"
 
+	// ekeyring "github.com/evmos/evmos/v16/crypto/keyring"
+
 	"github.com/evmos/evmos/v16/encoding"
 	"github.com/evmos/evmos/v16/server/config"
 	evmostypes "github.com/evmos/evmos/v16/types"
@@ -77,9 +80,9 @@ type Config struct {
 	AppConstructor    AppConstructor      // the ABCI application constructor
 	GenesisState      simapp.GenesisState // custom gensis state to provide
 	TimeoutCommit     time.Duration       // the consensus commitment timeout
-	AccountTokens     math.Int            // the amount of unique validator tokens (e.g. 1000node0)
-	StakingTokens     math.Int            // the amount of tokens each validator has available to stake
-	BondedTokens      math.Int            // the amount of tokens each validator stakes
+	AccountTokens     math.Int            // the amount of system tokens(e.g. 1000hua)
+	StakingTokens     math.Int            // the amount of tokens each validator for every supported asset has available to stake
+	BondedTokens      math.Int            // the amount of tokens each validator stakes for every supporte asset
 	NumValidators     int                 // the total number of validators to create and bond
 	ChainID           string              // the network chain-id
 	BondDenom         string              // the staking bond denomination
@@ -113,14 +116,15 @@ func DefaultConfig() Config {
 		NumValidators:     4,
 		BondDenom:         "hua",
 		MinGasPrices:      fmt.Sprintf("0.000006%s", evmostypes.AttoEvmos),
-		AccountTokens:     sdk.TokensFromConsensusPower(1000000000000000000, evmostypes.PowerReduction),
-		StakingTokens:     sdk.TokensFromConsensusPower(500000000000000000, evmostypes.PowerReduction),
-		BondedTokens:      sdk.TokensFromConsensusPower(100000000000000000, evmostypes.PowerReduction),
+		AccountTokens:     sdk.TokensFromConsensusPower(1000, evmostypes.PowerReduction),
+		StakingTokens:     sdk.TokensFromConsensusPower(500, evmostypes.PowerReduction),
+		BondedTokens:      sdk.TokensFromConsensusPower(200, evmostypes.PowerReduction),
 		PruningStrategy:   pruningtypes.PruningOptionNothing,
 		CleanupDir:        true,
 		SigningAlgo:       string(hd.EthSecp256k1Type),
 		KeyringOptions:    []keyring.Option{hd.EthSecp256k1Option()},
-		PrintMnemonic:     false,
+		// KeyringOptions: []keyring.Option{ekeyring.Option()},
+		PrintMnemonic: false,
 	}
 }
 
@@ -235,6 +239,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 	monikers := make([]string, cfg.NumValidators)
 	nodeIDs := make([]string, cfg.NumValidators)
 	valPubKeys := make([]cryptotypes.PubKey, cfg.NumValidators)
+	addressesIPs := make([]string, cfg.NumValidators)
 
 	var (
 		genAccounts []authtypes.GenesisAccount
@@ -334,8 +339,8 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		ctx.Logger = logger
 
 		nodeDirName := fmt.Sprintf("node%d", i)
-		nodeDir := filepath.Join(network.BaseDir, nodeDirName, "evmosd")
-		clientDir := filepath.Join(network.BaseDir, nodeDirName, "evmoscli")
+		nodeDir := filepath.Join(network.BaseDir, nodeDirName, "exocored")
+		clientDir := filepath.Join(network.BaseDir, nodeDirName, "exocorecli")
 		gentxsDir := filepath.Join(network.BaseDir, "gentxs")
 
 		err := os.MkdirAll(filepath.Join(nodeDir, "config"), 0o750)
@@ -366,11 +371,18 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		tmCfg.P2P.AddrBookStrict = false
 		tmCfg.P2P.AllowDuplicateIP = true
 
+		// initialize nodekey, consensus_priv_key under nodeDir
 		nodeID, pubKey, err := genutil.InitializeNodeValidatorFiles(tmCfg)
 		if err != nil {
 			return nil, err
 		}
+
+		p2pURL, err := url.Parse(p2pAddr)
+		if err != nil {
+			return nil, err
+		}
 		nodeIDs[i] = nodeID
+		addressesIPs[i] = fmt.Sprintf("%s@%s:%s", nodeIDs[i], p2pURL.Hostname(), p2pURL.Port())
 		valPubKeys[i] = pubKey
 
 		kb, err := keyring.New(sdk.KeyringServiceName(), keyring.BackendTest, clientDir, buf, cfg.Codec, cfg.KeyringOptions...)
@@ -401,7 +413,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			return nil, err
 		}
 
-		// save private key seed words
+		// save private key seed words of account used as validator
 		err = WriteFile(fmt.Sprintf("%v.json", "key_seed"), clientDir, infoBz)
 		if err != nil {
 			return nil, err
@@ -436,14 +448,15 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			return nil, err
 		}
 
-		p2pURL, err := url.Parse(p2pAddr)
-		if err != nil {
-			return nil, err
-		}
+		//		p2pURL, err := url.Parse(p2pAddr)
+		//		if err != nil {
+		//			return nil, err
+		//		}
 
 		memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], p2pURL.Hostname(), p2pURL.Port())
 		fee := sdk.NewCoins(sdk.NewCoin(cfg.BondDenom, sdk.NewInt(0)))
 		txBuilder := cfg.TxConfig.NewTxBuilder()
+
 		err = txBuilder.SetMsgs(createValMsg)
 		if err != nil {
 			return nil, err
@@ -472,7 +485,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			return nil, err
 		}
 
-		customAppTemplate, _ := config.AppConfig(evmostypes.AttoEvmos)
+		customAppTemplate, _ := config.AppConfig("hua")
 		srvconfig.SetConfigTemplate(customAppTemplate)
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appCfg)
 
@@ -510,6 +523,15 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		}
 	}
 
+	sort.Strings(addressesIPs)
+	// set persistentPeers for tendermintConfig and write into configFile for each valdiator
+	for i := 0; i < cfg.NumValidators; i++ {
+		cfgTmp := network.Validators[i].Ctx.Config
+		cfgTmp.P2P.PersistentPeers = strings.Join(append(addressesIPs[0:i], addressesIPs[i+1:]...), ",")
+		tmcfg.WriteConfigFile(filepath.Join(cfgTmp.RootDir, "config", "config.toml"), cfgTmp)
+	}
+
+	// cfg.WriteConfigFile(filepath.Join(config.RootDir, "config", "config.toml"), config)
 	err := initGenFiles(cfg, genAccounts, genBalances, genFiles)
 	if err != nil {
 		return nil, err
