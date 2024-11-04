@@ -155,18 +155,18 @@ func (AppModule) ConsensusVersion() uint64 { return 1 }
 func (am AppModule) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
 	// init caches and aggregatorContext for node restart
 	// TODO: try better way to init caches and aggregatorContext than beginBlock
-	once.Do(func() {
-		_ = keeper.GetCaches()
-		_ = keeper.GetAggregatorContext(ctx, am.keeper)
-	})
+	//	once.Do(func() {
+	_ = am.keeper.GetCaches()
+	_ = am.keeper.GetAggregatorContext(ctx)
+	// })
 }
 
 // EndBlock contains the logic that is automatically triggered at the end of each block
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
-	cs := keeper.GetCaches()
+	cs := am.keeper.GetCaches()
 	validatorUpdates := am.keeper.GetValidatorUpdates(ctx)
 	forceSeal := false
-	agc := keeper.GetAggregatorContext(ctx, am.keeper)
+	agc := am.keeper.GetAggregatorContext(ctx)
 
 	logger := am.keeper.Logger(ctx)
 	if len(validatorUpdates) > 0 {
@@ -197,7 +197,7 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 		logger.Info("add new round with previous price under fail aggregation", "tokenID", tokenID, "roundID", nextRoundID, "price", prevPrice)
 	}
 
-	keeper.ResetAggregatorContextCheckTx()
+	am.keeper.ResetAggregatorContextCheckTx()
 
 	if _, _, paramsUpdated := cs.CommitCache(ctx, false, am.keeper); paramsUpdated {
 		var p cache.ItemP
@@ -210,14 +210,14 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 		))
 	}
 
-	if feederIDs := keeper.GetUpdatedFeederIDs(); len(feederIDs) > 0 {
+	if feederIDs := am.keeper.GetUpdatedFeederIDs(); len(feederIDs) > 0 {
 		feederIDsStr := strings.Join(feederIDs, "_")
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
 			types.EventTypeCreatePrice,
 			sdk.NewAttribute(types.AttributeKeyPriceUpdated, types.AttributeValuePriceUpdatedSuccess),
 			sdk.NewAttribute(types.AttributeKeyFeederIDs, feederIDsStr),
 		))
-		keeper.ResetUpdatedFeederIDs()
+		am.keeper.ResetUpdatedFeederIDs()
 	}
 
 	newRoundFeederIDs := agc.PrepareRoundEndBlock(uint64(ctx.BlockHeight()))

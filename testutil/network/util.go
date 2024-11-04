@@ -14,12 +14,12 @@ import (
 	"github.com/cometbft/cometbft/proxy"
 	"github.com/cometbft/cometbft/rpc/client/local"
 	"github.com/cometbft/cometbft/types"
-	tmtime "github.com/cometbft/cometbft/types/time"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	assetstypes "github.com/ExocoreNetwork/exocore/x/assets/types"
+	avstypes "github.com/ExocoreNetwork/exocore/x/avs/types"
 	delegationtypes "github.com/ExocoreNetwork/exocore/x/delegation/types"
 	dogfoodtypes "github.com/ExocoreNetwork/exocore/x/dogfood/types"
 	operatortypes "github.com/ExocoreNetwork/exocore/x/operator/types"
@@ -30,12 +30,11 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	cmttime "github.com/cometbft/cometbft/types/time"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/evmos/evmos/v16/server"
 	evmostypes "github.com/evmos/evmos/v16/types"
@@ -156,43 +155,7 @@ func startInProcess(cfg Config, val *Validator) error {
 	return nil
 }
 
-// collectGenFiles doesn't actually actually collect gentx and fill into genesis since we use dogfood to replace staking module. Modify genesisfile to fill validator related information in genesisfile
-func collectGenFiles(cfg Config, vals []*Validator, outputDir string) error {
-	genTime := tmtime.Now()
-
-	for i := 0; i < cfg.NumValidators; i++ {
-		tmCfg := vals[i].Ctx.Config
-
-		nodeDir := filepath.Join(outputDir, vals[i].Moniker, "exocored")
-		gentxsDir := filepath.Join(outputDir, "gentxs")
-
-		tmCfg.Moniker = vals[i].Moniker
-		tmCfg.SetRoot(nodeDir)
-
-		initCfg := genutiltypes.NewInitConfig(cfg.ChainID, gentxsDir, vals[i].NodeID, vals[i].PubKey)
-
-		genFile := tmCfg.GenesisFile()
-		genDoc, err := types.GenesisDocFromFile(genFile)
-		if err != nil {
-			return err
-		}
-
-		appState, err := genutil.GenAppStateFromConfig(cfg.Codec, cfg.TxConfig,
-			tmCfg, initCfg, *genDoc, banktypes.GenesisBalancesIterator{}, genutiltypes.DefaultMessageValidator)
-		if err != nil {
-			return err
-		}
-
-		// overwrite each validator's genesis file to have a canonical genesis time
-		if err := genutil.ExportGenesisFileWithTime(genFile, cfg.ChainID, nil, appState, genTime); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func initGenFiles(cfg Config, genAccounts []authtypes.GenesisAccount, genBalances []banktypes.Balance, genFiles []string) error {
+func initGenFiles(cfg Config, genAccounts []authtypes.GenesisAccount, genBalances []banktypes.Balance, genFiles []string, validators []*Validator, commissionRate sdkmath.LegacyDec) error {
 	// set the accounts in the genesis state
 	var authGenState authtypes.GenesisState
 	cfg.Codec.MustUnmarshalJSON(cfg.GenesisState[authtypes.ModuleName], &authGenState)
@@ -229,20 +192,45 @@ func initGenFiles(cfg Config, genAccounts []authtypes.GenesisAccount, genBalance
 	cfg.GenesisState[evmtypes.ModuleName] = cfg.Codec.MustMarshalJSON(&evmGenState)
 
 	// set validators related modules: assets, operator, dogfood
-	var assetsGenState assetstypes.GenesisState
-	cfg.Codec.MustUnmarshalJSON(cfg.GenesisState[assetstypes.ModuleName], &assetsGenState)
-	NewGenStateAssets(&assetsGenState)
+	operatorAccAddresses := make([]sdk.AccAddress, 0, len(validators))
+	consPubKeys := make([]string, 0, len(validators))
+	for _, validator := range validators {
+		operatorAccAddresses = append(operatorAccAddresses, validator.Address)
+		// the bytes in vmmostype, tmproto, tmcryptointerface are actually the same, we skip the conversion in test scenario
+		consPubKeys = append(consPubKeys, hexutil.Encode(validator.PubKey.Bytes()))
+	}
+
+	assetsGenState, err := NewGenStateAssets(operatorAccAddresses, cfg.DepositedTokens, cfg.StakingTokens)
+	if err != nil {
+		return err
+	}
 	cfg.GenesisState[assetstypes.ModuleName] = cfg.Codec.MustMarshalJSON(&assetsGenState)
 
-	var operatorGenState operatortypes.GenesisState
-	cfg.Codec.MustUnmarshalJSON(cfg.GenesisState[assetstypes.ModuleName], &operatorGenState)
+	avsAddrStr := avstypes.GenerateAVSAddr(avstypes.ChainIDWithoutRevision(cfg.ChainID))
+	operatorGenState, err := NewGenStateOperator(operatorAccAddresses, consPubKeys, commissionRate, cfg.ChainID, []string{avsAddrStr}, cfg.StakingTokens, assetsGenState)
+	if err != nil {
+		return err
+	}
+	cfg.GenesisState[operatortypes.ModuleName] = cfg.Codec.MustMarshalJSON(&operatorGenState)
 
-	var dogfoodGenState dogfoodtypes.GenesisState
-	cfg.Codec.MustUnmarshalJSON(cfg.GenesisState[assetstypes.ModuleName], &dogfoodGenState)
+	dogfoodGenState, err := NewGenStateDogfood(consPubKeys, cfg.StakingTokens, assetsGenState)
+	if err != nil {
+		return err
+	}
+	cfg.GenesisState[dogfoodtypes.ModuleName] = cfg.Codec.MustMarshalJSON(&dogfoodGenState)
+
+	delegationGenState, err := NewGenStateDelegation(operatorAccAddresses, cfg.StakingTokens, assetsGenState)
+	if err != nil {
+		return err
+	}
+	cfg.GenesisState[delegationtypes.ModuleName] = cfg.Codec.MustMarshalJSON(&delegationGenState)
 
 	// set oracle genesis statse
-	var oracleGenState oracletypes.GenesisState
-	cfg.Codec.MustUnmarshalJSON(cfg.GenesisState[assetstypes.ModuleName], &oracleGenState)
+	oracleGenState, err := NewGenStateOracle()
+	if err != nil {
+		return err
+	}
+	cfg.GenesisState[oracletypes.ModuleName] = cfg.Codec.MustMarshalJSON(&oracleGenState)
 
 	appGenStateJSON, err := json.MarshalIndent(cfg.GenesisState, "", "  ")
 	if err != nil {
@@ -256,7 +244,15 @@ func initGenFiles(cfg Config, genAccounts []authtypes.GenesisAccount, genBalance
 	}
 
 	// generate empty genesis files for each validator and save
+	gTime := cmttime.Now()
 	for i := 0; i < cfg.NumValidators; i++ {
+		if genDoc.InitialHeight == 0 {
+			genDoc.InitialHeight = 1
+		}
+		genDoc.GenesisTime = gTime
+		if err := genDoc.ValidateAndComplete(); err != nil {
+			return err
+		}
 		if err := genDoc.SaveAs(genFiles[i]); err != nil {
 			return err
 		}
@@ -275,6 +271,8 @@ func WriteFile(name string, dir string, contents []byte) error {
 
 	return tmos.WriteFile(file, contents, 0o644)
 }
+
+// The NewGenState.. is mainlly used for validatorset related config
 
 // set deposits and operator_assets for assets genesisState
 func NewGenStateAssets(operatorAccAddresses []sdktypes.AccAddress, depositAmount, stakingAmount sdkmath.Int) (assetstypes.GenesisState, error) {
@@ -338,7 +336,7 @@ func NewGenStateAssets(operatorAccAddresses []sdktypes.AccAddress, depositAmount
 // each avs suppport all assets
 // each operator opts in every avs
 // each operator deposited and self staked all assets with: (depsitAmount, stakingAmount)
-// intial price for every asset is 1 USD
+// initial price for every asset is 1 USD
 func NewGenStateOperator(operatorAccAddresses []sdktypes.AccAddress, consPubKeys []string, commissionRate sdkmath.LegacyDec, chainID string, optedAVSAddresses []string, stakingAmount sdkmath.Int, genStateAssets assetstypes.GenesisState) (operatortypes.GenesisState, error) {
 	// total stakingAmount one operator holds among all assets
 	stakingAmount = stakingAmount.Mul(sdkmath.NewInt(int64(len(genStateAssets.Tokens))))
@@ -368,7 +366,7 @@ func NewGenStateOperator(operatorAccAddresses []sdktypes.AccAddress, consPubKeys
 			OperatorAddress: operatorAccAddress.String(),
 			Chains: []operatortypes.ChainDetails{
 				{
-					ChainID:      chainID,
+					ChainID:      avstypes.ChainIDWithoutRevision(chainID),
 					ConsensusKey: consPubKeys[i],
 				},
 			},
@@ -409,11 +407,11 @@ func NewGenStateOperator(operatorAccAddresses []sdktypes.AccAddress, consPubKeys
 	return DefaultGenStateOperator, nil
 }
 
-func NewGenStateDogfood(consPubKeys []string, powers []sdkmath.LegacyDec, stakingAmount sdkmath.Int, genStateAssets assetstypes.GenesisState) (dogfoodtypes.GenesisState, error) {
+// NewGenStateDogfood generates dogfood genesis state from default
+// stakingAmount is the amount each operator have for every single asset defined in assets module, so for a single operator the total stakingAmount they have is stakingAmount*count(assets)
+// assets genesis state is required as input argument to provide assets information. It should be called with NewGenStateAssets to update default assets genesis state for test
+func NewGenStateDogfood(consPubKeys []string, stakingAmount sdkmath.Int, genStateAssets assetstypes.GenesisState) (dogfoodtypes.GenesisState, error) {
 	power := sdktypes.TokensToConsensusPower(stakingAmount.Mul(sdkmath.NewInt(int64(len(genStateAssets.Tokens)))), evmostypes.PowerReduction)
-	// if len(consPubKeys) != len(powers) {
-	// 	return DefaultGenStateDogfood, fmt.Errorf("lenght of consensusKey %d should be equal to length of powers %d", len(consPubKeys), len(powers))
-	// }
 	DefaultGenStateDogfood.Params.EpochIdentifier = "minute"
 	DefaultGenStateDogfood.Params.EpochsUntilUnbonded = 5
 	DefaultGenStateDogfood.Params.MinSelfDelegation = sdkmath.NewInt(100)
@@ -438,6 +436,36 @@ func NewGenStateDogfood(consPubKeys []string, powers []sdkmath.LegacyDec, stakin
 	return DefaultGenStateDogfood, nil
 }
 
-func NewGenStateDelegation(operatorAccAddresses []sdk.AccAddress, genStateAssets assetstypes.GenesisState) (delegationtypes.GenesisState, error) {
+func NewGenStateDelegation(operatorAccAddresses []sdk.AccAddress, stakingAmount sdkmath.Int, genStateAssets assetstypes.GenesisState) (delegationtypes.GenesisState, error) {
+	for _, operator := range operatorAccAddresses {
+		stakerIDsLinked := make(map[string]bool)
+		for _, asset := range genStateAssets.Tokens {
+			stakerID, assetID := assetstypes.GetStakerIDAndAssetIDFromStr(asset.AssetBasicInfo.LayerZeroChainID, hexutil.Encode(operator), asset.AssetBasicInfo.Address)
+			if !stakerIDsLinked[stakerID] {
+				DefaultGenStateDelegation.Associations = append(DefaultGenStateDelegation.Associations, delegationtypes.StakerToOperator{
+					StakerID: stakerID,
+					Operator: operator.String(),
+				})
+				stakerIDsLinked[stakerID] = true
+			}
+			DefaultGenStateDelegation.DelegationStates = append(DefaultGenStateDelegation.DelegationStates, delegationtypes.DelegationStates{
+				Key: stakerID + "/" + assetID + "/" + operator.String(),
+				States: delegationtypes.DelegationAmounts{
+					UndelegatableShare:     sdkmath.LegacyNewDecFromInt(stakingAmount),
+					WaitUndelegationAmount: sdkmath.ZeroInt(),
+				},
+			})
+			DefaultGenStateDelegation.StakersByOperator = append(DefaultGenStateDelegation.StakersByOperator, delegationtypes.StakersByOperator{
+				Key: operator.String() + "/" + assetID,
+				Stakers: []string{
+					stakerID,
+				},
+			})
+		}
+	}
 	return DefaultGenStateDelegation, nil
+}
+
+func NewGenStateOracle() (oracletypes.GenesisState, error) {
+	return DefaultGenStateOracle, nil
 }

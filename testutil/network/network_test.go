@@ -26,13 +26,15 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	var err error
 	cfg := exocorenetwork.DefaultConfig()
 	cfg.JSONRPCAddress = config.DefaultJSONRPCAddress
-	cfg.NumValidators = 1
+	cfg.NumValidators = 3
+	cfg.CleanupDir = false
+	cfg.EnableTMLogging = true
 
 	s.network, err = network.New(s.T(), s.T().TempDir(), cfg)
 	s.Require().NoError(err)
 	s.Require().NotNil(s.network)
 
-	_, err = s.network.WaitForHeight(2)
+	_, err = s.network.WaitForHeightWithTimeout(2, 300*time.Second)
 	s.Require().NoError(err)
 
 	if s.network.Validators[0].JSONRPCClient == nil {

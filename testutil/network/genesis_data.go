@@ -6,9 +6,13 @@ import (
 	delegationtypes "github.com/ExocoreNetwork/exocore/x/delegation/types"
 	dogfoodtypes "github.com/ExocoreNetwork/exocore/x/dogfood/types"
 	operatortypes "github.com/ExocoreNetwork/exocore/x/operator/types"
+	oracletypes "github.com/ExocoreNetwork/exocore/x/oracle/types"
 )
 
 var (
+	// DefaultGenStateAssets only includes two assets, one for ETH and the other for NST ETH
+	// For the contract address of asset-ETH we filled with the address of USDT, that's ok for test
+	// we bond both tokens to the price of ETH in oracle module
 	DefaultGenStateAssets = assetstypes.GenesisState{
 		Params: assetstypes.Params{
 			ExocoreLzAppAddress:    "0x3e108c058e8066da635321dc3018294ca82ddedf",
@@ -26,8 +30,9 @@ var (
 			{
 				// for test this token will be registered on ETH in oracle module
 				AssetBasicInfo: assetstypes.AssetInfo{
-					Name:             "Tether USD",
-					MetaInfo:         "Tether USD token",
+					Name:     "ETH",
+					MetaInfo: "Ethereum native token",
+					// the address is of USDT_Etheruem, but that's ok
 					Address:          "0xdac17f958d2ee523a2206206994597c13d831ec7",
 					LayerZeroChainID: 101,
 				},
@@ -45,11 +50,20 @@ var (
 		},
 	}
 
-	// DefaultGenStateOperator = operatortypes.GenesisState{}
-	DefaultGenStateOperator = *operatortypes.DefaultGenesis()
+	DefaultGenStateOperator = operatortypes.GenesisState{}
+	// DefaultGenStateOperator = *operatortypes.DefaultGenesis()
 
-	// DefaultGenStateDelegation = delegationtypes.GenesisState{}
-	DefaultGenStateDelegation = *delegationtypes.DefaultGenesis()
+	DefaultGenStateDelegation = delegationtypes.GenesisState{}
+	// DefaultGenStateDelegation = *delegationtypes.DefaultGenesis()
 
 	DefaultGenStateDogfood = *dogfoodtypes.DefaultGenesis()
+
+	DefaultGenStateOracle = *oracletypes.DefaultGenesis()
 )
+
+func init() {
+	// bond assetsIDs of ETH, NSTETH to ETH price
+	DefaultGenStateOracle.Params.Tokens[1].AssetID = "0xdac17f958d2ee523a2206206994597c13d831ec7_0x65,0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee_0x65"
+	// set ETH tokenfeeder's 'StartBaseBlock' to 10
+	DefaultGenStateOracle.Params.TokenFeeders[1].StartBaseBlock = 10
+}

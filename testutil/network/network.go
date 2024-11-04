@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
+	sdkmath "cosmossdk.io/math"
 	dbm "github.com/cometbft/cometbft-db"
 	tmcfg "github.com/cometbft/cometbft/config"
 	tmflags "github.com/cometbft/cometbft/libs/cli/flags"
@@ -34,7 +35,6 @@ import (
 	"github.com/ExocoreNetwork/exocore/app"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -50,7 +50,6 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/evmos/evmos/v16/crypto/hd"
 
 	// ekeyring "github.com/evmos/evmos/v16/crypto/keyring"
@@ -81,21 +80,21 @@ type Config struct {
 	GenesisState      simapp.GenesisState // custom gensis state to provide
 	TimeoutCommit     time.Duration       // the consensus commitment timeout
 	AccountTokens     math.Int            // the amount of system tokens(e.g. 1000hua)
-	StakingTokens     math.Int            // the amount of tokens each validator for every supported asset has available to stake
-	BondedTokens      math.Int            // the amount of tokens each validator stakes for every supporte asset
-	NumValidators     int                 // the total number of validators to create and bond
-	ChainID           string              // the network chain-id
-	BondDenom         string              // the staking bond denomination
-	MinGasPrices      string              // the minimum gas prices each validator will accept
-	PruningStrategy   string              // the pruning strategy each validator will have
-	SigningAlgo       string              // signing algorithm for keys
-	RPCAddress        string              // RPC listen address (including port)
-	JSONRPCAddress    string              // JSON-RPC listen address (including port)
-	APIAddress        string              // REST API listen address (including port)
-	GRPCAddress       string              // GRPC server listen address (including port)
-	EnableTMLogging   bool                // enable Tendermint logging to STDOUT
-	CleanupDir        bool                // remove base temporary directory during cleanup
-	PrintMnemonic     bool                // print the mnemonic of first validator as log output for testing
+	DepositedTokens   math.Int
+	StakingTokens     math.Int // the amount of tokens each validator stakes for every supporte asset
+	NumValidators     int      // the total number of validators to create and bond
+	ChainID           string   // the network chain-id
+	BondDenom         string   // the staking bond denomination
+	MinGasPrices      string   // the minimum gas prices each validator will accept
+	PruningStrategy   string   // the pruning strategy each validator will have
+	SigningAlgo       string   // signing algorithm for keys
+	RPCAddress        string   // RPC listen address (including port)
+	JSONRPCAddress    string   // JSON-RPC listen address (including port)
+	APIAddress        string   // REST API listen address (including port)
+	GRPCAddress       string   // GRPC server listen address (including port)
+	EnableTMLogging   bool     // enable Tendermint logging to STDOUT
+	CleanupDir        bool     // remove base temporary directory during cleanup
+	PrintMnemonic     bool     // print the mnemonic of first validator as log output for testing
 }
 
 // DefaultConfig returns a sane default configuration suitable for nearly all
@@ -115,16 +114,15 @@ func DefaultConfig() Config {
 		ChainID:           chainID,
 		NumValidators:     4,
 		BondDenom:         "hua",
-		MinGasPrices:      fmt.Sprintf("0.000006%s", evmostypes.AttoEvmos),
+		MinGasPrices:      fmt.Sprintf("0.000006%s", "hua"),
 		AccountTokens:     sdk.TokensFromConsensusPower(1000, evmostypes.PowerReduction),
-		StakingTokens:     sdk.TokensFromConsensusPower(500, evmostypes.PowerReduction),
-		BondedTokens:      sdk.TokensFromConsensusPower(200, evmostypes.PowerReduction),
+		DepositedTokens:   sdk.TokensFromConsensusPower(500, evmostypes.PowerReduction),
+		StakingTokens:     sdk.TokensFromConsensusPower(200, evmostypes.PowerReduction),
 		PruningStrategy:   pruningtypes.PruningOptionNothing,
 		CleanupDir:        true,
 		SigningAlgo:       string(hd.EthSecp256k1Type),
 		KeyringOptions:    []keyring.Option{hd.EthSecp256k1Option()},
-		// KeyringOptions: []keyring.Option{ekeyring.Option()},
-		PrintMnemonic: false,
+		PrintMnemonic:     false,
 	}
 }
 
@@ -341,7 +339,6 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		nodeDirName := fmt.Sprintf("node%d", i)
 		nodeDir := filepath.Join(network.BaseDir, nodeDirName, "exocored")
 		clientDir := filepath.Join(network.BaseDir, nodeDirName, "exocorecli")
-		gentxsDir := filepath.Join(network.BaseDir, "gentxs")
 
 		err := os.MkdirAll(filepath.Join(nodeDir, "config"), 0o750)
 		if err != nil {
@@ -421,7 +418,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 
 		balances := sdk.NewCoins(
 			sdk.NewCoin(fmt.Sprintf("%stoken", nodeDirName), cfg.AccountTokens),
-			sdk.NewCoin(cfg.BondDenom, cfg.StakingTokens),
+			sdk.NewCoin(cfg.BondDenom, cfg.DepositedTokens),
 		)
 
 		genFiles = append(genFiles, tmCfg.GenesisFile())
@@ -430,60 +427,6 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			BaseAccount: authtypes.NewBaseAccount(addr, nil, 0, 0),
 			CodeHash:    common.BytesToHash(evmtypes.EmptyCodeHash).Hex(),
 		})
-
-		commission, err := sdk.NewDecFromStr("0.5")
-		if err != nil {
-			return nil, err
-		}
-
-		createValMsg, err := stakingtypes.NewMsgCreateValidator(
-			sdk.ValAddress(addr),
-			valPubKeys[i],
-			sdk.NewCoin(cfg.BondDenom, cfg.BondedTokens),
-			stakingtypes.NewDescription(nodeDirName, "", "", "", ""),
-			stakingtypes.NewCommissionRates(commission, sdk.OneDec(), sdk.OneDec()),
-			sdk.OneInt(),
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		//		p2pURL, err := url.Parse(p2pAddr)
-		//		if err != nil {
-		//			return nil, err
-		//		}
-
-		memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], p2pURL.Hostname(), p2pURL.Port())
-		fee := sdk.NewCoins(sdk.NewCoin(cfg.BondDenom, sdk.NewInt(0)))
-		txBuilder := cfg.TxConfig.NewTxBuilder()
-
-		err = txBuilder.SetMsgs(createValMsg)
-		if err != nil {
-			return nil, err
-		}
-		txBuilder.SetFeeAmount(fee)    // Arbitrary fee
-		txBuilder.SetGasLimit(1000000) // Need at least 100386
-		txBuilder.SetMemo(memo)
-
-		txFactory := tx.Factory{}
-		txFactory = txFactory.
-			WithChainID(cfg.ChainID).
-			WithMemo(memo).
-			WithKeybase(kb).
-			WithTxConfig(cfg.TxConfig)
-
-		if err := tx.Sign(txFactory, nodeDirName, txBuilder, true); err != nil {
-			return nil, err
-		}
-
-		txBz, err := cfg.TxConfig.TxJSONEncoder()(txBuilder.GetTx())
-		if err != nil {
-			return nil, err
-		}
-
-		if err := WriteFile(fmt.Sprintf("%v.json", nodeDirName), gentxsDir, txBz); err != nil {
-			return nil, err
-		}
 
 		customAppTemplate, _ := config.AppConfig("hua")
 		srvconfig.SetConfigTemplate(customAppTemplate)
@@ -527,16 +470,15 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 	// set persistentPeers for tendermintConfig and write into configFile for each valdiator
 	for i := 0; i < cfg.NumValidators; i++ {
 		cfgTmp := network.Validators[i].Ctx.Config
-		cfgTmp.P2P.PersistentPeers = strings.Join(append(addressesIPs[0:i], addressesIPs[i+1:]...), ",")
+		IPs := make([]string, 0, cfg.NumValidators-1)
+		IPs = append(IPs, addressesIPs[0:i]...)
+		IPs = append(IPs, addressesIPs[i+1:]...)
+		cfgTmp.P2P.PersistentPeers = strings.Join(IPs, ",")
 		tmcfg.WriteConfigFile(filepath.Join(cfgTmp.RootDir, "config", "config.toml"), cfgTmp)
 	}
 
-	// cfg.WriteConfigFile(filepath.Join(config.RootDir, "config", "config.toml"), config)
-	err := initGenFiles(cfg, genAccounts, genBalances, genFiles)
-	if err != nil {
-		return nil, err
-	}
-	err = collectGenFiles(cfg, network.Validators, network.BaseDir)
+	commissionRate, _ := sdkmath.LegacyNewDecFromStr("0.5")
+	err := initGenFiles(cfg, genAccounts, genBalances, genFiles, network.Validators, commissionRate)
 	if err != nil {
 		return nil, err
 	}
