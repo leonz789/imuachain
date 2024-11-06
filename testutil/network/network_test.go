@@ -1,6 +1,7 @@
 package network_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -12,6 +13,9 @@ import (
 	"github.com/evmos/evmos/v16/server/config"
 
 	exocorenetwork "github.com/ExocoreNetwork/exocore/testutil/network"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
 type IntegrationTestSuite struct {
@@ -27,8 +31,8 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	cfg := exocorenetwork.DefaultConfig()
 	cfg.JSONRPCAddress = config.DefaultJSONRPCAddress
 	cfg.NumValidators = 3
-	cfg.CleanupDir = false
-	cfg.EnableTMLogging = true
+	cfg.CleanupDir = true
+	cfg.EnableTMLogging = false
 
 	s.network, err = network.New(s.T(), s.T().TempDir(), cfg)
 	s.Require().NoError(err)
@@ -56,6 +60,14 @@ func (s *IntegrationTestSuite) TestNetwork_Liveness() {
 	latestHeight, err := s.network.LatestHeight()
 	s.Require().NoError(err, "latest height failed")
 	s.Require().GreaterOrEqual(latestHeight, h)
+
+	res, err := s.network.QueryBank().Balance(context.Background(), &banktypes.QueryBalanceRequest{
+		Address: s.network.Validators[0].Address.String(),
+		Denom:   s.network.Config.NativeDenom,
+	})
+	s.Require().NoError(err, "query for validator's balance fail")
+
+	s.Require().Equal(sdk.NewCoin(s.network.Config.NativeDenom, s.network.Config.AccountTokens), *res.Balance)
 }
 
 func TestIntegrationTestSuite(t *testing.T) {

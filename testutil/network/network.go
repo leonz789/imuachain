@@ -84,17 +84,18 @@ type Config struct {
 	StakingTokens     math.Int // the amount of tokens each validator stakes for every supporte asset
 	NumValidators     int      // the total number of validators to create and bond
 	ChainID           string   // the network chain-id
-	BondDenom         string   // the staking bond denomination
-	MinGasPrices      string   // the minimum gas prices each validator will accept
-	PruningStrategy   string   // the pruning strategy each validator will have
-	SigningAlgo       string   // signing algorithm for keys
-	RPCAddress        string   // RPC listen address (including port)
-	JSONRPCAddress    string   // JSON-RPC listen address (including port)
-	APIAddress        string   // REST API listen address (including port)
-	GRPCAddress       string   // GRPC server listen address (including port)
-	EnableTMLogging   bool     // enable Tendermint logging to STDOUT
-	CleanupDir        bool     // remove base temporary directory during cleanup
-	PrintMnemonic     bool     // print the mnemonic of first validator as log output for testing
+	// BondDenom         string   // the staking bond denomination
+	NativeDenom     string // denomination for native token
+	MinGasPrices    string // the minimum gas prices each validator will accept
+	PruningStrategy string // the pruning strategy each validator will have
+	SigningAlgo     string // signing algorithm for keys
+	RPCAddress      string // RPC listen address (including port)
+	JSONRPCAddress  string // JSON-RPC listen address (including port)
+	APIAddress      string // REST API listen address (including port)
+	GRPCAddress     string // GRPC server listen address (including port)
+	EnableTMLogging bool   // enable Tendermint logging to STDOUT
+	CleanupDir      bool   // remove base temporary directory during cleanup
+	PrintMnemonic   bool   // print the mnemonic of first validator as log output for testing
 }
 
 // DefaultConfig returns a sane default configuration suitable for nearly all
@@ -110,19 +111,21 @@ func DefaultConfig() Config {
 		AccountRetriever:  authtypes.AccountRetriever{},
 		AppConstructor:    NewAppConstructor(encCfg, chainID),
 		GenesisState:      app.ModuleBasics.DefaultGenesis(encCfg.Codec),
-		TimeoutCommit:     3 * time.Second,
+		TimeoutCommit:     2 * time.Second,
 		ChainID:           chainID,
 		NumValidators:     4,
-		BondDenom:         "hua",
-		MinGasPrices:      fmt.Sprintf("0.000006%s", "hua"),
-		AccountTokens:     sdk.TokensFromConsensusPower(1000, evmostypes.PowerReduction),
-		DepositedTokens:   sdk.TokensFromConsensusPower(500, evmostypes.PowerReduction),
-		StakingTokens:     sdk.TokensFromConsensusPower(200, evmostypes.PowerReduction),
-		PruningStrategy:   pruningtypes.PruningOptionNothing,
-		CleanupDir:        true,
-		SigningAlgo:       string(hd.EthSecp256k1Type),
-		KeyringOptions:    []keyring.Option{hd.EthSecp256k1Option()},
-		PrintMnemonic:     false,
+		// BondDenom:         "hua",
+		NativeDenom: "hua",
+		// MinGasPrices:    fmt.Sprintf("0.000006%s", "exo"),
+		MinGasPrices:    "10hua",
+		AccountTokens:   sdk.TokensFromConsensusPower(1000, evmostypes.PowerReduction),
+		DepositedTokens: sdk.TokensFromConsensusPower(500, evmostypes.PowerReduction),
+		StakingTokens:   sdk.TokensFromConsensusPower(200, evmostypes.PowerReduction),
+		PruningStrategy: pruningtypes.PruningOptionNothing,
+		CleanupDir:      true,
+		SigningAlgo:     string(hd.EthSecp256k1Type),
+		KeyringOptions:  []keyring.Option{hd.EthSecp256k1Option()},
+		PrintMnemonic:   false,
 	}
 }
 
@@ -250,6 +253,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 	// generate private keys, node IDs, and initial transactions
 	for i := 0; i < cfg.NumValidators; i++ {
 		appCfg := config.DefaultConfig()
+		appCfg.MinGasPrices = cfg.MinGasPrices
 		appCfg.Pruning = cfg.PruningStrategy
 		appCfg.MinGasPrices = cfg.MinGasPrices
 		appCfg.API.Enable = true
@@ -417,8 +421,9 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		}
 
 		balances := sdk.NewCoins(
-			sdk.NewCoin(fmt.Sprintf("%stoken", nodeDirName), cfg.AccountTokens),
-			sdk.NewCoin(cfg.BondDenom, cfg.DepositedTokens),
+			//	sdk.NewCoin(fmt.Sprintf("%stoken", nodeDirName), cfg.AccountTokens),
+			// sdk.NewCoin(cfg.BondDenom, cfg.DepositedTokens),
+			sdk.NewCoin(cfg.NativeDenom, cfg.AccountTokens),
 		)
 
 		genFiles = append(genFiles, tmCfg.GenesisFile())
