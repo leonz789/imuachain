@@ -38,13 +38,8 @@ func newRecordMsg() recordMsg {
 	return make(map[recordKey][]*types.PriceTimeDetID)
 }
 
-func (r recordMsg) has(validator string, feederID, sourceID uint64) bool {
-	_, ok := r[recordKey{validator, feederID, sourceID}]
-	return ok
-}
-
 func (r recordMsg) get(validator string, feederID, sourceID uint64) []*types.PriceTimeDetID {
-	v, _ := r[recordKey{validator, feederID, sourceID}]
+	v := r[recordKey{validator, feederID, sourceID}]
 	return v
 }
 

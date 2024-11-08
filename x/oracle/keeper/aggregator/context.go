@@ -211,7 +211,7 @@ func (agc *AggregatorContext) NewCreatePrice(_ sdk.Context, msg *types.MsgCreate
 // returns: 1st successful sealed, need to be written to KVStore, 2nd: failed sealed tokenID, use previous price to write to KVStore
 func (agc *AggregatorContext) SealRound(ctx sdk.Context, force bool) (success []*PriceItemKV, failed []uint64, sealed []uint64, windowClosed []uint64) {
 	feederIDs := make([]uint64, 0, len(agc.rounds))
-	for fID, _ := range agc.rounds {
+	for fID := range agc.rounds {
 		feederIDs = append(feederIDs, fID)
 	}
 	sort.Slice(feederIDs, func(i, j int) bool {

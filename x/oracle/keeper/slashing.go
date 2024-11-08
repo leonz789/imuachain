@@ -115,7 +115,6 @@ func (k Keeper) IterateValidatorReportInfos(ctx sdk.Context, handler func(addres
 }
 
 func (k Keeper) IterateValidatorMissedRoundBitArray(ctx sdk.Context, validator string, handler func(index int64, missed bool) (stop bool)) {
-	//	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.SlashingMissedBitArrayPrefix(validator))
 	store := ctx.KVStore(k.storeKey)
 	index := int64(0)
 	// Array may be sparse
