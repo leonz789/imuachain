@@ -161,7 +161,7 @@ func (am AppModule) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
 		agc := keeper.GetAggregatorContext(ctx, am.keeper)
 		validatorPowers := agc.GetValidatorPowers()
 		// set validatorReportInfo to track performance
-		for validator, _ := range validatorPowers {
+		for validator := range validatorPowers {
 			am.keeper.InitValidatorReportInfo(ctx, validator, ctx.BlockHeight())
 		}
 	})

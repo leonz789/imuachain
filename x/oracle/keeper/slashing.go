@@ -43,7 +43,7 @@ func (k Keeper) GetValidatorReportInfo(ctx sdk.Context, validator string) (info 
 	return
 }
 
-// SetValidatorMissedBlockBitArray sets the bit that checks if the validator has
+// SetValidatorMissedRoundBitArray sets the bit that checks if the validator has
 // missed a round to report price in the current window
 func (k Keeper) SetValidatorMissedRoundBitArray(ctx sdk.Context, validator string, index uint64, missed bool) {
 	store := ctx.KVStore(k.storeKey)
@@ -63,7 +63,7 @@ func (k Keeper) GetValidatorMissedRoundBitArray(ctx sdk.Context, validator strin
 	return missed.Value
 }
 
-// GetReportedBlocksWindow sliding window for reporting slashing
+// GetReportedRoundsWindow returns the sliding window size for reporting slashing
 func (k Keeper) GetReportedRoundsWindow(ctx sdk.Context) int64 {
 	return k.GetParams(ctx).Slashing.ReportedRoundsWindow
 }
@@ -73,7 +73,7 @@ func (k Keeper) GetSlashFractionMiss(ctx sdk.Context) (res sdk.Dec) {
 	return k.GetParams(ctx).Slashing.SlashFractionMiss
 }
 
-// GetSlashFractionMiss fraction of power slashed for missed rounds
+// GetSlashFractionMalicious fraction returns the fraction of power slashed for malicious behavior
 func (k Keeper) GetSlashFractionMalicious(ctx sdk.Context) (res sdk.Dec) {
 	return k.GetParams(ctx).Slashing.SlashFractionMalicious
 }
@@ -88,12 +88,12 @@ func (k Keeper) GetMinReportedPerWindow(ctx sdk.Context) int64 {
 	return params.Slashing.MinReportedPerWindow.MulInt64(reportedRoundsWindow).RoundInt64()
 }
 
-// MissJailDuration miss unbond duration
+// GetMissJailDuration returns the jail duration for a validator who misses reports
 func (k Keeper) GetMissJailDuration(ctx sdk.Context) (res time.Duration) {
 	return k.GetParams(ctx).Slashing.OracleMissJailDuration
 }
 
-// MissJailDuration miss unbond duration
+// GetMaliciousJailDuration returns the jail duration for malicious validator behavior
 func (k Keeper) GetMaliciousJailDuration(ctx sdk.Context) (res time.Duration) {
 	return k.GetParams(ctx).Slashing.OracleMaliciousJailDuration
 }

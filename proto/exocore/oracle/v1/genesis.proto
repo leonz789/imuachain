@@ -44,9 +44,9 @@ message GenesisState {
 
   // information for slashing history
   // ValidatorReportInfo records all the validatorReportInfos
-  repeated ValidatorReportInfo report_infos = 10[(gogoproto.nullable)=false];
+  repeated ValidatorReportInfo validator_report_infos = 10[(gogoproto.nullable)=false];
   // ValidatorMissedRounds records missedRounds for all validators seen
-  repeated ValidatorMissedRounds missed_rounds = 11[(gogoproto.nullable)=false];
+  repeated ValidatorMissedRounds validator_missed_rounds = 11[(gogoproto.nullable)=false];
 }
 
 // stakerInfosAssets bond stakerinfos to their related assets id
@@ -67,7 +67,9 @@ message StakerListAssets {
 
 // ValidatorMissedRounds record missed rounds indexes for a validator which consAddr corresponding to the address
 message ValidatorMissedRounds {
+  // address of validator
   string address = 1;
+  // missed_rounds tells how many rounds this validtor had missed for current windo
   repeated MissedRound missed_rounds = 2;
 }
 

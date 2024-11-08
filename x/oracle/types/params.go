@@ -146,12 +146,23 @@ func (p Params) Validate() error {
 		return ErrInvalidParams.Wrap("slashing params must not be nil")
 	}
 
-	if slashing.ReportedRoundsWindow < 1 ||
-		slashing.MinReportedPerWindow.GT(oneDec) || !slashing.MinReportedPerWindow.IsPositive() ||
-		slashing.SlashFractionMiss.GT(oneDec) || !slashing.SlashFractionMiss.IsPositive() ||
-		slashing.SlashFractionMalicious.GT(oneDec) || !slashing.SlashFractionMalicious.IsPositive() ||
-		slashing.OracleMissJailDuration <= 0 || slashing.OracleMaliciousJailDuration <= 0 {
-		return ErrInvalidParams.Wrapf("invalid slashing params: reported_window/min_reported_per_window/oracle_miss_jail_duration/oracle_malicious_jail_duration/slash_fraction_miss/slash_fraction_malicious:%v,%v,%v,%v,%v,%v", slashing.ReportedRoundsWindow, slashing.MinReportedPerWindow, slashing.OracleMissJailDuration, slashing.OracleMaliciousJailDuration, slashing.SlashFractionMiss, slashing.SlashFractionMalicious)
+	if slashing.ReportedRoundsWindow < 1 {
+		return ErrInvalidParams.Wrapf("ReportedRoundsWindow must be at least 1, got %d", slashing.ReportedRoundsWindow)
+	}
+	if slashing.MinReportedPerWindow.GT(oneDec) || !slashing.MinReportedPerWindow.IsPositive() {
+		return ErrInvalidParams.Wrapf("MinReportedPerWindow must be in (0, 1], got %v", slashing.MinReportedPerWindow)
+	}
+	if slashing.SlashFractionMiss.GT(oneDec) || !slashing.SlashFractionMiss.IsPositive() {
+		return ErrInvalidParams.Wrapf("SlashFractionMiss must be in (0, 1], got %v", slashing.SlashFractionMiss)
+	}
+	if slashing.SlashFractionMalicious.GT(oneDec) || !slashing.SlashFractionMalicious.IsPositive() {
+		return ErrInvalidParams.Wrapf("SlashFractionMalicious must be in (0, 1], got %v", slashing.SlashFractionMalicious)
+	}
+	if slashing.OracleMissJailDuration <= 0 {
+		return ErrInvalidParams.Wrapf("OracleMissJailDuration must be positive, got %v", slashing.OracleMissJailDuration)
+	}
+	if slashing.OracleMaliciousJailDuration <= 0 {
+		return ErrInvalidParams.Wrapf("OracleMaliciousJailDuration must be positive, got %v", slashing.OracleMaliciousJailDuration)
 	}
 
 	// validate tokenFeeders

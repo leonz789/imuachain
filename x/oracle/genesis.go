@@ -41,11 +41,11 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) 
 		k.SetStakerInfos(ctx, elem.AssetId, elem.StakerInfos)
 	}
 	// set validatorReportInfos
-	for _, elem := range genState.ReportInfos {
+	for _, elem := range genState.ValidatorReportInfos {
 		k.SetValidatorReportInfo(ctx, elem.Address, elem)
 	}
 	// set vlidatorMissedRounds
-	for _, elem := range genState.MissedRounds {
+	for _, elem := range genState.ValidatorMissedRounds {
 		for _, missedRound := range elem.MissedRounds {
 			k.SetValidatorMissedRoundBitArray(ctx, elem.Address, uint64(missedRound.Index), missedRound.Missed)
 		}
@@ -98,8 +98,8 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 		})
 		return false
 	})
-	genesis.ReportInfos = reportInfos
-	genesis.MissedRounds = validatorMissedRounds
+	genesis.ValidatorReportInfos = reportInfos
+	genesis.ValidatorMissedRounds = validatorMissedRounds
 	// this line is used by starport scaffolding # genesis/module/export
 
 	return genesis
