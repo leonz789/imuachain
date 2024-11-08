@@ -379,11 +379,17 @@ func (agc *AggregatorContext) GetFinalPriceListForFeederIDs(feederIDs []uint64) 
 	return ret
 }
 
-func (agc *AggregatorContext) PerformanceReview(finalPrice *types.AggFinalPrice, validator string) (exist, matched bool) {
+// PerformanceReview compare results to decide whether the validator is effective, honest
+func (agc *AggregatorContext) PerformanceReview(ctx sdk.Context, finalPrice *types.AggFinalPrice, validator string) (exist, matched bool) {
 	feederWorker := agc.aggregators[finalPrice.FeederID]
 	if feederWorker == nil {
-		// should not happen
-		// something wrong happened in the agc, so we just skip this round by treat the validator as effective&honest
+		// Log unexpected nil feederWorker for debugging
+		ctx.Logger().Error(
+			"unexpected nil feederWorker in PerformanceReview",
+			"feederID", finalPrice.FeederID,
+			"validator", validator,
+		)
+		// Treat validator as effective & honest to avoid unfair penalties
 		exist = true
 		matched = true
 		return

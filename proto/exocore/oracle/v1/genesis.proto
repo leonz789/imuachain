@@ -73,7 +73,10 @@ message ValidatorMissedRounds {
   repeated MissedRound missed_rounds = 2;
 }
 
+// MissedRound records if round with index is missed
 message MissedRound {
+  // index of the round in current window
   int64 index = 1;
+  // if this round is missed
   bool missed = 2;
 }

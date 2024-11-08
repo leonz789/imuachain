@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"encoding/binary"
+	"fmt"
 	"time"
 
 	"github.com/ExocoreNetwork/exocore/x/oracle/types"
@@ -114,19 +116,18 @@ func (k Keeper) IterateValidatorReportInfos(ctx sdk.Context, handler func(addres
 	iterator.Close()
 }
 
+// IterateValidatorMissedRoundBitArrray iterates all missed rounds in one performance window of rounds
 func (k Keeper) IterateValidatorMissedRoundBitArray(ctx sdk.Context, validator string, handler func(index int64, missed bool) (stop bool)) {
-	store := ctx.KVStore(k.storeKey)
-	index := int64(0)
-	// Array may be sparse
-	for ; index < k.GetReportedRoundsWindow(ctx); index++ {
+	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.SlashingMissedBitArrayPrefix(validator))
+	iterator := sdk.KVStorePrefixIterator(store, []byte{})
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		index := binary.BigEndian.Uint64(iterator.Key())
 		var missed gogotypes.BoolValue
-		bz := store.Get(types.SlashingMissedBitArrayKey(validator, uint64(index)))
-		if bz == nil {
-			continue
+		if err := k.cdc.Unmarshal(iterator.Value(), &missed); err != nil {
+			panic(fmt.Sprintf("failed to unmarshal missed round: %v", err))
 		}
-
-		k.cdc.MustUnmarshal(bz, &missed)
-		if handler(index, missed.Value) {
+		if handler(int64(index), missed.Value) {
 			break
 		}
 	}
@@ -141,7 +142,7 @@ func (k Keeper) GetValidatorMissedRounds(ctx sdk.Context, address string) []*typ
 	return missedRounds
 }
 
-// clearValidatorMissedBlockBitArray deletes every instance of ValidatorMissedBlockBitArray in the store
+// ClearValidatorMissedBlockBitArray deletes every instance of ValidatorMissedBlockBitArray in the store
 func (k Keeper) ClearValidatorMissedRoundBitArray(ctx sdk.Context, validator string) {
 	store := ctx.KVStore(k.storeKey)
 	iterator := sdk.KVStorePrefixIterator(store, types.SlashingMissedBitArrayPrefix(validator))

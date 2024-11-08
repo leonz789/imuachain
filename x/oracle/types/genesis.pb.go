@@ -328,9 +328,12 @@ func (m *ValidatorMissedRounds) GetMissedRounds() []*MissedRound {
 	return nil
 }
 
+// MissedRound records if round with index is missed
 type MissedRound struct {
-	Index  int64 `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
-	Missed bool  `protobuf:"varint,2,opt,name=missed,proto3" json:"missed,omitempty"`
+	// index of the round in current window
+	Index int64 `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
+	// if this round is missed
+	Missed bool `protobuf:"varint,2,opt,name=missed,proto3" json:"missed,omitempty"`
 }
 
 func (m *MissedRound) Reset()         { *m = MissedRound{} }
