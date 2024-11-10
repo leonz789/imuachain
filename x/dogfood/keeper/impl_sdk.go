@@ -217,7 +217,6 @@ func (k Keeper) IterateBondedValidatorsByPower(
 		// the voting power is fetched from this module and not the operator module
 		// because it is applied at the end of an epoch, whereas that from the operator
 		// module is more recent.
-		// the 'Tokens' is actually usd value including different types of assets * sdk.DefaultPowerReduction
 		val.Tokens = sdk.TokensFromConsensusPower(v.Power, sdk.DefaultPowerReduction)
 		// since the validator object was fetched from this module, we should set it to bonded.
 		val.Status = stakingtypes.Bonded
@@ -232,18 +231,22 @@ func (k Keeper) IterateBondedValidatorsByPower(
 // TotalBondedTokens is an implementation of the staking interface expected by the SDK's
 // gov module. This is not implemented intentionally, since the tokens securing this chain
 // are many and span across multiple chains and assets.
-func (k Keeper) TotalBondedTokens(sdk.Context) math.Int {
+func (k Keeper) TotalBondedTokens(ctx sdk.Context) math.Int {
 	// TODO: return totalBondedPower(virtual tokens from power) compatible with multi-assets staking
-	panic("unimplemented on this keeper")
+	totalPower := math.ZeroInt()
+	k.IterateBondedValidatorsByPower(ctx, func(_ int64, v stakingtypes.ValidatorI) bool {
+		totalPower = totalPower.Add(v.GetTokens())
+		return false
+	})
+	return totalPower
 }
 
 // IterateDelegations is an implementation of the staking interface expected by the SDK's
 // gov module. See note above to understand why this is not implemented.
 func (k Keeper) IterateDelegations(
-	sdk.Context, sdk.AccAddress,
-	func(int64, stakingtypes.DelegationI) bool,
+	ctx sdk.Context, _ sdk.AccAddress,
+	_ func(int64, stakingtypes.DelegationI) bool,
 ) {
-	// TODO: for the usage from gov, the shares for one delegation should be the usd-power hold by that delegation, also convert with sdk.DefaultPowerReduction, then gov module should have the expected result
-	// in this way, the calculation: votingPower := delegation.GetShares().MulInt(val.BondedTokens).Quo(val.DelegatorShares) will just equals to votingpower := delegation.GetShares() = delegation.usd-power
-	panic("unimplemented on this keeper")
+	// for now we don't have mechabnism to bond delegatorAddress from clientChain to their cosmossdk address(for EVM when can force user use the same ethsecp256k1 instead of secp256k1 to retrieve default bonded addresses, but that not a universal approach), we'll just ignore any delegator's vote, and validator will have the total power including all the delegated assts, and that's reasonanble
+	ctx.Logger().Info("IterateDelegations from gov tally will just return, which means operator/validator will have all the powers delegated to them when voting proposal")
 }
