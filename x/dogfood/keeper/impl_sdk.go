@@ -140,6 +140,7 @@ func (k Keeper) Unjail(ctx sdk.Context, addr sdk.ConsAddress) {
 // module. The slashing module uses it to obtain the delegation information of a validator
 // before unjailing it. If the slashing module's unjail function is never called, this
 // function will never be called either.
+// NOTE: this is not a universal function, it not actually get delegation for {delegator, validator}, but only returns {validator}'s self delegation, only suites for special invoke
 func (k Keeper) Delegation(
 	ctx sdk.Context, delegator sdk.AccAddress, validator sdk.ValAddress,
 ) stakingtypes.DelegationI {
@@ -216,6 +217,7 @@ func (k Keeper) IterateBondedValidatorsByPower(
 		// the voting power is fetched from this module and not the operator module
 		// because it is applied at the end of an epoch, whereas that from the operator
 		// module is more recent.
+		// the 'Tokens' is actually usd value including different types of assets * sdk.DefaultPowerReduction
 		val.Tokens = sdk.TokensFromConsensusPower(v.Power, sdk.DefaultPowerReduction)
 		// since the validator object was fetched from this module, we should set it to bonded.
 		val.Status = stakingtypes.Bonded
@@ -231,6 +233,7 @@ func (k Keeper) IterateBondedValidatorsByPower(
 // gov module. This is not implemented intentionally, since the tokens securing this chain
 // are many and span across multiple chains and assets.
 func (k Keeper) TotalBondedTokens(sdk.Context) math.Int {
+	// TODO: return totalBondedPower(virtual tokens from power) compatible with multi-assets staking
 	panic("unimplemented on this keeper")
 }
 
@@ -240,5 +243,7 @@ func (k Keeper) IterateDelegations(
 	sdk.Context, sdk.AccAddress,
 	func(int64, stakingtypes.DelegationI) bool,
 ) {
+	// TODO: for the usage from gov, the shares for one delegation should be the usd-power hold by that delegation, also convert with sdk.DefaultPowerReduction, then gov module should have the expected result
+	// in this way, the calculation: votingPower := delegation.GetShares().MulInt(val.BondedTokens).Quo(val.DelegatorShares) will just equals to votingpower := delegation.GetShares() = delegation.usd-power
 	panic("unimplemented on this keeper")
 }
