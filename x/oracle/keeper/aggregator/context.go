@@ -160,12 +160,6 @@ func (agc *AggregatorContext) FillPrice(msg *types.MsgCreatePrice) (*PriceItemKV
 		agc.aggregators[msg.FeederID] = feederWorker
 	}
 
-	// if feederWorker.sealed {
-	// 	// record this message for performance evaluate(used for slashing)
-	// 	return nil, nil, types.ErrPriceProposalIgnored.Wrap("price aggregation for this round has sealed")
-	// }
-
-	// list4Calculator, list4Aggregator := w.f.filtrate(msg)
 	if feederWorker.sealed {
 		if _, list4Aggregator := feederWorker.filtrate(msg); list4Aggregator != nil {
 			// record this message for performance evaluation(used for slashing)
@@ -217,8 +211,14 @@ func (agc *AggregatorContext) SealRound(ctx sdk.Context, force bool) (success []
 	sort.Slice(feederIDs, func(i, j int) bool {
 		return feederIDs[i] < feederIDs[j]
 	})
+	height := uint64(ctx.BlockHeight())
 	// make sure feederIDs are accessed in order to calculate the indexOffset for slashing
+	windowClosedMap := make(map[uint64]bool)
 	for _, feederID := range feederIDs {
+		if agc.windowEnd(feederID, height) {
+			windowClosed = append(windowClosed, feederID)
+			windowClosedMap[feederID] = true
+		}
 		round := agc.rounds[feederID]
 		if round.status == roundStatusOpen {
 			feeder := agc.params.GetTokenFeeder(feederID)
@@ -226,25 +226,23 @@ func (agc *AggregatorContext) SealRound(ctx sdk.Context, force bool) (success []
 			// but it's not always the same for other modes, switch modes
 			switch common.Mode {
 			case types.ConsensusModeASAP:
-				offset := uint64(ctx.BlockHeight()) - round.basedBlock
-				expired := feeder.EndBlock > 0 && uint64(ctx.BlockHeight()) >= feeder.EndBlock
+				offset := height - round.basedBlock
+				expired := feeder.EndBlock > 0 && height >= feeder.EndBlock
 				outOfWindow := offset >= uint64(common.MaxNonce)
 
 				// an open round reach its end of window, increase offsetIndex for active valdiator and chech the performance(missing/malicious)
-				if round.status == roundStatusOpen && offset == uint64(common.MaxNonce) {
-					windowClosed = append(windowClosed, feederID)
-				}
 
 				if expired || outOfWindow || force {
 					failed = append(failed, feeder.TokenID)
-					if expired {
-						delete(agc.rounds, feederID)
-					} else {
+					if !expired {
 						round.status = roundStatusClosed
 					}
 					// TODO: optimize operformance
 					sealed = append(sealed, feederID)
-					delete(agc.aggregators, feederID)
+					if !windowClosedMap[feederID] {
+						// this should be clear after performanceReview
+						agc.RemoveWorker(feederID)
+					}
 				}
 			default:
 				ctx.Logger().Info("mode other than 1 is not support now")
@@ -252,7 +250,6 @@ func (agc *AggregatorContext) SealRound(ctx sdk.Context, force bool) (success []
 		}
 		// all status: 1->2, remove its aggregator
 		if agc.aggregators[feederID] != nil && agc.aggregators[feederID].sealed {
-			delete(agc.aggregators, feederID)
 			sealed = append(sealed, feederID)
 		}
 	}
@@ -308,9 +305,10 @@ func (agc *AggregatorContext) PrepareRoundEndBlock(block uint64) (newRoundFeeder
 				// set nonce for corresponding feederID for new roud start
 				newRoundFeederIDs = append(newRoundFeederIDs, feederIDUint64)
 				// drop previous worker
-				delete(agc.aggregators, feederIDUint64)
+				agc.RemoveWorker(feederIDUint64)
 			} else if round.status == roundStatusOpen && left >= uint64(common.MaxNonce) {
 				// this shouldn't happen, if do sealround properly before prepareRound, basically for test only
+				// TODO: print error log here
 				round.status = roundStatusClosed
 				// TODO: just modify the status here, since sealRound should do all the related seal actions already when parepare invoked
 			}
@@ -396,6 +394,23 @@ func (agc *AggregatorContext) PerformanceReview(ctx sdk.Context, finalPrice *typ
 	}
 	exist, matched = feederWorker.check(validator, finalPrice.FeederID, finalPrice.SourceID, finalPrice.Price, finalPrice.DetID)
 	return
+}
+
+func (agc AggregatorContext) windowEnd(feederID, height uint64) bool {
+	feeder := agc.params.TokenFeeders[feederID]
+	if (feeder.EndBlock > 0 && feeder.EndBlock <= height) || feeder.StartBaseBlock > height {
+		return false
+	}
+	delta := height - feeder.StartBaseBlock
+	left := delta % feeder.Interval
+	if left == uint64(common.MaxNonce) {
+		return true
+	}
+	return false
+}
+
+func (agc *AggregatorContext) RemoveWorker(feederID uint64) {
+	delete(agc.aggregators, feederID)
 }
 
 // NewAggregatorContext returns a new instance of AggregatorContext

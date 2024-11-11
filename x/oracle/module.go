@@ -200,6 +200,11 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 
 	// TODO: for v1 use mode==1, just check the failed feeders
 	_, failed, sealed, windowClosed := agc.SealRound(ctx, forceSeal)
+	defer func() {
+		for _, feederID := range windowClosed {
+			agc.RemoveWorker(feederID)
+		}
+	}()
 	// update&check slashing info
 	validatorPowers := agc.GetValidatorPowers()
 	for validator, power := range validatorPowers {

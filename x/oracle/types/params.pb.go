@@ -208,15 +208,15 @@ func (m *Params) GetSlashing() *SlashingParams {
 type SlashingParams struct {
 	// reported_rounds_window defines how many rounds included in one window for performance review of missing report
 	ReportedRoundsWindow int64 `protobuf:"varint,1,opt,name=reported_rounds_window,json=reportedRoundsWindow,proto3" json:"reported_rounds_window,omitempty"`
-	// min_reported_perwindow defines at least how many rounds should be reported, this is a percentage of reported_rounds_window
+	// min_reported_perwindow defines at least how many rounds should be reported, this is a percentage of window
 	MinReportedPerWindow github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,2,opt,name=min_reported_per_window,json=minReportedPerWindow,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"min_reported_per_window"`
 	// oracle_miss_jail_duraion defines the duration one validator should be jailed for missing reporting price
 	OracleMissJailDuration time.Duration `protobuf:"bytes,3,opt,name=oracle_miss_jail_duration,json=oracleMissJailDuration,proto3,stdduration" json:"oracle_miss_jail_duration"`
 	// oracle_malicious_jail_duration defines the duratin one validator should be jailed for malicious behavior
 	OracleMaliciousJailDuration time.Duration `protobuf:"bytes,4,opt,name=oracle_malicious_jail_duration,json=oracleMaliciousJailDuration,proto3,stdduration" json:"oracle_malicious_jail_duration"`
-	// slash_fraction_miss defines the fractino one validator should be punished with thier staked assets for msissing reporting price
+	// slash_fraction_miss defines the fraction one validator should be punished for msissing reporting price
 	SlashFractionMiss github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,5,opt,name=slash_fraction_miss,json=slashFractionMiss,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"slash_fraction_miss"`
-	// slash_fraction_miss defines the fractino one validator should be punished with thier staked assets for maliciours behavior
+	// slash_fraction_miss defines the fractino one validator should be punished for maliciours behavior
 	SlashFractionMalicious github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,6,opt,name=slash_fraction_malicious,json=slashFractionMalicious,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"slash_fraction_malicious"`
 }
 
