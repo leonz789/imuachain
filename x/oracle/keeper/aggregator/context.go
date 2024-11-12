@@ -403,10 +403,7 @@ func (agc AggregatorContext) windowEnd(feederID, height uint64) bool {
 	}
 	delta := height - feeder.StartBaseBlock
 	left := delta % feeder.Interval
-	if left == uint64(common.MaxNonce) {
-		return true
-	}
-	return false
+	return left == uint64(common.MaxNonce)
 }
 
 func (agc *AggregatorContext) RemoveWorker(feederID uint64) {
