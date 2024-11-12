@@ -50,6 +50,7 @@ func (r recordMsg) check(validator string, feederID, sourceID uint64, price, det
 			exist = true
 			if p.Price == price {
 				matched = true
+				return
 			}
 		}
 	}
