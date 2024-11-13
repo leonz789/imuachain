@@ -166,6 +166,7 @@ var _ = Describe("MsgUpdateParams", Ordered, func() {
 
 	Context("update TokenFeeders", func() {
 		It("update StartBaseBlock for TokenFeeder", func() {
+			ks.ctx = ks.ctx.WithBlockHeight(2)
 			p := defaultParams
 			p.TokenFeeders[1].StartBaseBlock = 10
 			ks.k.SetParams(ks.ctx, p)

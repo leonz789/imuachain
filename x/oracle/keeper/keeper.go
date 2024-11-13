@@ -11,11 +11,20 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
+	"github.com/ExocoreNetwork/exocore/x/oracle/keeper/aggregator"
+	"github.com/ExocoreNetwork/exocore/x/oracle/keeper/cache"
 	"github.com/ExocoreNetwork/exocore/x/oracle/keeper/common"
 	"github.com/ExocoreNetwork/exocore/x/oracle/types"
 )
 
 type (
+	memoryStore struct {
+		cs               *cache.Cache
+		agc              *aggregator.AggregatorContext
+		agcCheckTx       *aggregator.AggregatorContext
+		updatedFeederIDs []string
+	}
+
 	Keeper struct {
 		cdc        codec.BinaryCodec
 		storeKey   storetypes.StoreKey
@@ -26,6 +35,8 @@ type (
 		delegationKeeper types.DelegationKeeper
 		assetsKeeper     types.AssetsKeeper
 		types.SlashingKeeper
+		// wrap all four memory cache into one pointer to track them among cpoies of Keeper (msgServer, module)
+		memStore *memoryStore
 	}
 )
 
@@ -61,6 +72,7 @@ func NewKeeper(
 		assetsKeeper:     assetsKeeper,
 		authority:        authority,
 		SlashingKeeper:   slashingKeeper,
+		memStore:         new(memoryStore),
 	}
 }
 

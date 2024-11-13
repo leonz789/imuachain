@@ -1,7 +1,6 @@
 package assets_test
 
 import (
-	"fmt"
 	"math/big"
 	"strings"
 
@@ -316,7 +315,6 @@ func (s *AssetsPrecompileSuite) TestRunWithdrawPrincipal() {
 			OpAmount:      depositAmount,
 		}
 		err := s.App.AssetsKeeper.PerformDepositOrWithdraw(s.Ctx, params)
-		fmt.Println("Debug---", assetAddress, len(assetAddress))
 		s.Require().NoError(err)
 	}
 
