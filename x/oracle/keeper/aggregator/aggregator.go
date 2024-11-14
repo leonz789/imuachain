@@ -217,6 +217,8 @@ func (agg *aggregator) getFinalPriceList(feederID uint64) []*types.AggFinalPrice
 				DetID:    price.detRoundID,
 				Price:    price.price.String(),
 			})
+			// {feederID, sourceID} has been found, skip rest reports
+			break
 		}
 	}
 	return ret
