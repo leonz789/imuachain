@@ -44,7 +44,7 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) 
 	for _, elem := range genState.ValidatorReportInfos {
 		k.SetValidatorReportInfo(ctx, elem.Address, elem)
 	}
-	// set vlidatorMissedRounds
+	// set validatorMissedRounds
 	for _, elem := range genState.ValidatorMissedRounds {
 		for _, missedRound := range elem.MissedRounds {
 			k.SetValidatorMissedRoundBitArray(ctx, elem.Address, missedRound.Index, missedRound.Missed)
