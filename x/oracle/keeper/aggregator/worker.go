@@ -108,10 +108,7 @@ func (w *worker) seal() {
 	}
 	w.sealed = true
 	w.price = w.a.aggregate().String()
-	w.f = nil
 	w.c = nil
-	// aggregator is kept for performance evaluation
-	// w.a = nil
 }
 
 // newWorker new a instance for a tokenFeeder's specific round
