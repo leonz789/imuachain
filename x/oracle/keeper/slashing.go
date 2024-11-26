@@ -26,7 +26,7 @@ func (k Keeper) InitValidatorReportInfo(ctx sdk.Context, validator string, heigh
 	}
 }
 
-// SetValidatorReportInfo sets the validator reporting info to a validator
+// SetValidatorReportInfo sets the validator reporting info for a validator
 func (k Keeper) SetValidatorReportInfo(ctx sdk.Context, validator string, info types.ValidatorReportInfo) {
 	store := ctx.KVStore(k.storeKey)
 	bz := k.cdc.MustMarshal(&info)
@@ -80,7 +80,7 @@ func (k Keeper) GetSlashFractionMalicious(ctx sdk.Context) (res sdk.Dec) {
 	return k.GetParams(ctx).Slashing.SlashFractionMalicious
 }
 
-// GetMinReportedPerWindow returns the minimum number of blocks that must report prices per window
+// GetMinReportedPerWindow returns the minimum number of blocks for which a validator must report prices during each window
 func (k Keeper) GetMinReportedPerWindow(ctx sdk.Context) int64 {
 	params := k.GetParams(ctx)
 	reportedRoundsWindow := params.Slashing.ReportedRoundsWindow
