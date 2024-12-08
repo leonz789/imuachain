@@ -8,6 +8,7 @@ import (
 	epochskeeper "github.com/ExocoreNetwork/exocore/x/epochs/keeper"
 	epochstypes "github.com/ExocoreNetwork/exocore/x/epochs/types"
 	distrkeeper "github.com/ExocoreNetwork/exocore/x/feedistribution/keeper"
+	distrtestutil "github.com/ExocoreNetwork/exocore/x/feedistribution/testutil"
 	"github.com/ExocoreNetwork/exocore/x/feedistribution/types"
 	tmdb "github.com/cometbft/cometbft-db"
 	"github.com/cometbft/cometbft/libs/log"
@@ -18,9 +19,8 @@ import (
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	distrtestutil "github.com/cosmos/cosmos-sdk/x/distribution/testutil"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func FeedistributeKeeper(t testing.TB) (distrkeeper.Keeper, sdk.Context) {
@@ -44,6 +44,8 @@ func FeedistributeKeeper(t testing.TB) (distrkeeper.Keeper, sdk.Context) {
 	accountKeeper := distrtestutil.NewMockAccountKeeper(ctrl)
 	accountKeeper.EXPECT().GetModuleAddress(types.ModuleName).Return(distrAcc.GetAddress())
 	bankKeeper := distrtestutil.NewMockBankKeeper(ctrl)
+	mintKeeper := distrtestutil.NewMockMintKeeper(ctrl)
+	avsKeeper := distrtestutil.NewMockAVSKeeper(ctrl)
 	epochskeeper := *epochskeeper.NewKeeper(cdc, epochstoreKey)
 	epochInfo := epochstypes.NewGenesisEpochInfo("minute", time.Hour*24*30)
 
@@ -57,6 +59,8 @@ func FeedistributeKeeper(t testing.TB) (distrkeeper.Keeper, sdk.Context) {
 		accountKeeper,
 		stakingkeeper.Keeper{},
 		epochskeeper,
+		mintKeeper,
+		avsKeeper,
 	)
 
 	ctx := sdk.NewContext(stateStore, cmtproto.Header{}, false, log.NewNopLogger())
