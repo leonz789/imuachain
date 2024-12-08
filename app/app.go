@@ -712,6 +712,8 @@ func NewExocoreApp(
 		app.AccountKeeper,
 		app.StakingKeeper,
 		app.EpochsKeeper,
+		app.ExomintKeeper,
+		app.AVSManagerKeeper,
 	)
 
 	app.Erc20Keeper = erc20keeper.NewKeeper(
@@ -777,8 +779,10 @@ func NewExocoreApp(
 
 	// set the hooks at the end, after all modules are instantiated.
 	(&app.OperatorKeeper).SetHooks(
-		app.DistrKeeper.OperatorHooks(),
-		app.StakingKeeper.OperatorHooks(),
+		operatorTypes.NewMultiOperatorHooks(
+			app.DistrKeeper.OperatorHooks(),
+			app.StakingKeeper.OperatorHooks(),
+		),
 	)
 
 	(&app.DelegationKeeper).SetHooks(
