@@ -21,6 +21,7 @@ import (
 	avstypes "github.com/ExocoreNetwork/exocore/x/avs/types"
 	delegationtypes "github.com/ExocoreNetwork/exocore/x/delegation/types"
 	dogfoodtypes "github.com/ExocoreNetwork/exocore/x/dogfood/types"
+	exominttypes "github.com/ExocoreNetwork/exocore/x/exomint/types"
 	operatortypes "github.com/ExocoreNetwork/exocore/x/operator/types"
 	oracletypes "github.com/ExocoreNetwork/exocore/x/oracle/types"
 	"github.com/cosmos/cosmos-sdk/server/api"
@@ -245,6 +246,9 @@ func initGenFiles(cfg Config, genAccounts []authtypes.GenesisAccount, genBalance
 		return err
 	}
 	cfg.GenesisState[oracletypes.ModuleName] = cfg.Codec.MustMarshalJSON(&oracleGenState)
+
+	// set exomint genesis state
+	cfg.GenesisState[exominttypes.ModuleName] = cfg.Codec.MustMarshalJSON(&DefaultGenStateExoMint)
 
 	appGenStateJSON, err := json.MarshalIndent(cfg.GenesisState, "", "  ")
 	if err != nil {

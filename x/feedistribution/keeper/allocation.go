@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"errors"
 	"sort"
 
 	"cosmossdk.io/math"
@@ -39,7 +40,10 @@ func (k Keeper) AllocateTokens(ctx sdk.Context, isSlash bool) error {
 			if !found {
 				// skip the calculation and distribute no minted coins out, the remaining will be handled at the end of the epoch
 				feesCollected.Sub(sdk.DecCoins{mintedCoinDec})
-				logger.Error("Failed to find epoch info")
+				logger.Error("Failed to find epoch info, no minted coins will be distributed")
+				if feesCollected.Empty() {
+					return errors.New("failed to AllocateTokens on slash event for minted coins calculation fail")
+				}
 			} else {
 				passedDuration := sdkmath.LegacyNewDec(int64(ctx.BlockTime().Sub(epochInfo.StartTime)))
 				epochDuration := sdkmath.LegacyNewDec(int64(epochInfo.Duration))
@@ -61,7 +65,7 @@ func (k Keeper) AllocateTokens(ctx sdk.Context, isSlash bool) error {
 		k.SetFeePool(ctx, feePool)
 		return nil
 	}
-	logger.Info("Allocate tokens to all validators", "feesCollected amount is ", feesCollected)
+	logger.Info("Allocate tokens to all validators", "feesCollected amount is ", feesCollected, feesCollected.Empty())
 	// calculate fraction allocated to exocore validators
 	remaining := feesCollected
 	communityTax, err := k.GetCommunityTax(ctx)
@@ -72,7 +76,7 @@ func (k Keeper) AllocateTokens(ctx sdk.Context, isSlash bool) error {
 
 	// allocate tokens proportionally to voting power of different validators
 	// TODO: Consider parallelizing later
-	allValidators := k.StakingKeeper.GetAllExocoreValidators(ctx) // GetAllValidators(suite.Ctx)
+	allValidators := k.StakingKeeper.GetAllExocoreValidators(ctx)
 	for i, val := range allValidators {
 		pk, err := val.ConsPubKey()
 		if err != nil {
@@ -141,7 +145,7 @@ func (k Keeper) AllocateTokensToValidator(ctx sdk.Context, val stakingtypes.Vali
 	outstanding := k.GetValidatorOutstandingRewards(ctx, valBz)
 	outstanding.Rewards = outstanding.Rewards.Add(tokens...)
 	k.SetValidatorOutstandingRewards(ctx, valBz, outstanding)
-	logger.Info("Allocate tokens to validator successfully", "allocated amount is", outstanding.Rewards.String())
+	logger.Info("Allocate tokens to validator successfully", "allocated amount is", tokens, "accumulated allocated amount is", outstanding.Rewards.String())
 }
 
 func (k Keeper) AllocateTokensToStakers(ctx sdk.Context, operatorAddress sdk.AccAddress, rewardToAllStakers sdk.DecCoins, feePool *types.FeePool) {
@@ -149,8 +153,10 @@ func (k Keeper) AllocateTokensToStakers(ctx sdk.Context, operatorAddress sdk.Acc
 	logger.Info("AllocateTokensToStakers", "operatorAddress", operatorAddress.String())
 	stakersPowerMap, curTotalStakersPowers := make(map[string]math.LegacyDec), math.LegacyNewDec(0)
 	globalStakerAddressList := make([]string, 0)
-	isAvs, avsAddress := k.avsKeeper.IsAVSByChainID(ctx, ctx.ChainID())
-	if !isAvs {
+
+	chainIDWithoutRevision := avstypes.ChainIDWithoutRevision(ctx.ChainID())
+	isAVS, avsAddress := k.avsKeeper.IsAVSByChainID(ctx, chainIDWithoutRevision)
+	if !isAVS {
 		logger.Error("Skipping distribution for due to fail to generate avsAddr from chainID", "chainID", ctx.ChainID())
 		return
 	}
@@ -195,5 +201,5 @@ func (k Keeper) AllocateTokensToSingleStaker(ctx sdk.Context, stakerAddress stri
 	currentStakerRewards := k.GetStakerRewards(ctx, stakerAddress)
 	currentStakerRewards.Rewards = currentStakerRewards.Rewards.Add(reward...)
 	k.SetStakerRewards(ctx, stakerAddress, currentStakerRewards)
-	logger.Info("allocate tokens to single staker successfully", "allocated amount is", currentStakerRewards.Rewards.String())
+	logger.Info("allocate tokens to single staker successfully", "allocated amount is", reward, "accumulated allocated amount is", currentStakerRewards.Rewards.String())
 }

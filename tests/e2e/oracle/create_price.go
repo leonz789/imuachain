@@ -323,7 +323,7 @@ func (s *E2ETestSuite) testSlashing() {
 	s.Require().NoError(err)
 	s.Require().True(resOperator.Jailed)
 	// wait for validator3 to pass jail duration
-	time.Sleep(35 * time.Second)
+	time.Sleep(12 * time.Second)
 	msgUnjail := slashingtypes.NewMsgUnjail(s.network.Validators[3].ValAddress)
 	// unjail validator3
 	err = s.network.SendTx([]sdk.Msg{msgUnjail}, "node3", kr3)
@@ -331,7 +331,6 @@ func (s *E2ETestSuite) testSlashing() {
 	s.moveNAndCheck(2)
 	resOperator, err = s.network.QueryOperator().QueryOptInfo(context.Background(), &operatortypes.QueryOptInfoRequest{OperatorAVSAddress: &operatortypes.OperatorAVSAddress{OperatorAddr: s.network.Validators[3].Address.String(), AvsAddress: avsAddr}})
 	s.Require().NoError(err)
-	fmt.Println("debug----->jailed:", resOperator.Jailed)
 	s.Require().False(resOperator.Jailed)
 }
 

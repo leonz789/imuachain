@@ -8,6 +8,8 @@ import (
 	assetstypes "github.com/ExocoreNetwork/exocore/x/assets/types"
 	delegationtypes "github.com/ExocoreNetwork/exocore/x/delegation/types"
 	dogfoodtypes "github.com/ExocoreNetwork/exocore/x/dogfood/types"
+	epochtypes "github.com/ExocoreNetwork/exocore/x/epochs/types"
+	exominttypes "github.com/ExocoreNetwork/exocore/x/exomint/types"
 	operatortypes "github.com/ExocoreNetwork/exocore/x/operator/types"
 	oracletypes "github.com/ExocoreNetwork/exocore/x/oracle/types"
 )
@@ -55,6 +57,8 @@ var (
 	DefaultGenStateDogfood = *dogfoodtypes.DefaultGenesis()
 
 	DefaultGenStateOracle = *oracletypes.DefaultGenesis()
+
+	DefaultGenStateExoMint = *exominttypes.DefaultGenesis()
 )
 
 func init() {
@@ -81,7 +85,9 @@ func init() {
 	// set slashing_miss window to 4
 	DefaultGenStateOracle.Params.Slashing.ReportedRoundsWindow = 4
 	// set jailduration of oracle report downtime to 30 seconds for test
-	DefaultGenStateOracle.Params.Slashing.OracleMissJailDuration = 30 * time.Second
+	DefaultGenStateOracle.Params.Slashing.OracleMissJailDuration = 10 * time.Second
+	// set mint duration to minute
+	DefaultGenStateExoMint.Params.EpochIdentifier = epochtypes.MinuteEpochID
 }
 
 func NewTestToken(name, metaInfo, address string, chainID uint64, amount int64) assetstypes.StakingAssetInfo {
