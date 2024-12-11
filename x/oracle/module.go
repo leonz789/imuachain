@@ -265,7 +265,8 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 					continue
 				}
 
-				index := uint64(reportedInfo.IndexOffset % am.keeper.GetReportedRoundsWindow(ctx))
+				reportedRoundsWindow := am.keeper.GetReportedRoundsWindow(ctx)
+				index := uint64(reportedInfo.IndexOffset % reportedRoundsWindow)
 				reportedInfo.IndexOffset++
 				// Update reported round bit array & counter
 				// This counter just tracks the sum of the bit array
@@ -306,8 +307,8 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 					)
 				}
 
-				minHeight := reportedInfo.StartHeight + am.keeper.GetReportedRoundsWindow(ctx)
-				maxMissed := am.keeper.GetReportedRoundsWindow(ctx) - minReportedPerWindow
+				minHeight := reportedInfo.StartHeight + reportedRoundsWindow
+				maxMissed := reportedRoundsWindow - minReportedPerWindow
 				// if we are past the minimum height and the validator has missed too many rounds reporting prices, punish them
 				if height > minHeight && reportedInfo.MissedRoundsCounter > maxMissed {
 					consAddr, err := sdk.ConsAddressFromBech32(validator)
