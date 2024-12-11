@@ -101,6 +101,11 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 		agc.SetParams(p)
 		setCommonParams(p)
 	} else {
+		forceSealed := false
+		latestValidatorUpdateBlock, _ := k.GetValidatorUpdateBlock(ctx)
+		if latestValidatorUpdateBlock.Block > uint64(from)-3 {
+			forceSealed = true
+		}
 		prev := int64(0)
 		for ; from < to; from++ {
 			// fill params
@@ -114,7 +119,7 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 				}
 			}
 
-			agc.PrepareRoundEndBlock(uint64(from - 1))
+			agc.PrepareRoundEndBlock(uint64(from-1), forceSealed)
 
 			if msgs := recentMsgs[from]; msgs != nil {
 				for _, msg := range msgs {
@@ -140,7 +145,7 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 			}
 		}
 
-		agc.PrepareRoundEndBlock(uint64(to - 1))
+		agc.PrepareRoundEndBlock(uint64(to-1), forceSealed)
 	}
 
 	var pRet cache.ItemP
@@ -178,7 +183,7 @@ func initAggregatorContext(ctx sdk.Context, agc *aggregator.AggregatorContext, k
 	// set validatorPower cache
 	c.AddCache(cache.ItemV(validatorPowers))
 
-	agc.PrepareRoundEndBlock(uint64(ctx.BlockHeight()) - 1)
+	agc.PrepareRoundEndBlock(uint64(ctx.BlockHeight())-1, false)
 }
 
 func (k *Keeper) ResetAggregatorContext() {
