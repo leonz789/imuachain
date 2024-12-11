@@ -102,10 +102,18 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 		setCommonParams(p)
 	} else {
 		forceSealed := false
-		latestValidatorUpdateBlock, ok := k.GetValidatorUpdateBlock(ctx)
-		if ok && (latestValidatorUpdateBlock.Block > uint64(from)-uint64(common.MaxNonce)) {
+		latestValidatorUpdateBlock, _ := k.GetValidatorUpdateBlock(ctx)
+		oracleParams := k.GetParams(ctx)
+
+		delta := uint64(0)
+		if from > int64(oracleParams.MaxNonce) {
+			delta = uint64(from) - uint64(common.MaxNonce)
+		}
+
+		if latestValidatorUpdateBlock.Block > delta {
 			forceSealed = true
 		}
+
 		prev := int64(0)
 		for ; from < to; from++ {
 			// fill params
@@ -145,7 +153,11 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 			}
 		}
 
-		agc.PrepareRoundEndBlock(uint64(to-1), forceSealed)
+		endHeight := uint64(0)
+		if to > 1 {
+			endHeight = uint64(to - 1)
+		}
+		agc.PrepareRoundEndBlock(endHeight, forceSealed)
 	}
 
 	var pRet cache.ItemP
