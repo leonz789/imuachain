@@ -269,8 +269,7 @@ func (agc *AggregatorContext) SealRound(ctx sdk.Context, force bool) (success []
 }
 
 // PrepareEndBlock is called at EndBlock stage, to prepare the roundInfo for the next block(of input block)
-// func (agc *AggregatorContext) PrepareRoundEndBlock(ctx sdk.Context, block uint64) {
-func (agc *AggregatorContext) PrepareRoundEndBlock(block int64, forceSealed bool) (newRoundFeederIDs []uint64) {
+func (agc *AggregatorContext) PrepareRoundEndBlock(block int64, forceSealHeight uint64) (newRoundFeederIDs []uint64) {
 	if block < 1 {
 		return newRoundFeederIDs
 	}
@@ -303,11 +302,12 @@ func (agc *AggregatorContext) PrepareRoundEndBlock(block int64, forceSealed bool
 				round.status = roundStatusClosed
 			} else {
 				round.status = roundStatusOpen
+				if latestBasedblock < forceSealHeight {
+					round.status = roundStatusClosed
+				}
 				if left == 0 {
 					// set nonce for corresponding feederID for new roud start
 					newRoundFeederIDs = append(newRoundFeederIDs, feederIDUint64)
-				} else if forceSealed {
-					round.status = roundStatusClosed
 				}
 			}
 			agc.rounds[feederIDUint64] = round

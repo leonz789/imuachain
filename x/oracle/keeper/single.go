@@ -70,11 +70,10 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 		return false
 	}
 
-	forceSealed := false
+	forceSealHeight := h.Block
 	// #nosec G115
-	if int64(h.Block) >= from {
+	if int64(forceSealHeight) >= from {
 		from = int64(h.Block) + 1
-		forceSealed = true
 		logger.Info("recacheAggregatorContext with validatorSet updated recently", "latestValidatorUpdateBlock", h.Block, "currentHeight", ctx.BlockHeight())
 	}
 
@@ -119,7 +118,7 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 				}
 			}
 
-			agc.PrepareRoundEndBlock(from-1, forceSealed)
+			agc.PrepareRoundEndBlock(from-1, forceSealHeight)
 
 			if msgs := recentMsgs[from]; msgs != nil {
 				for _, msg := range msgs {
@@ -145,7 +144,7 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 			}
 		}
 	}
-	agc.PrepareRoundEndBlock(to-1, forceSealed)
+	agc.PrepareRoundEndBlock(to-1, forceSealHeight)
 
 	var pRet cache.ItemP
 	if updated := c.GetCache(&pRet); !updated {
@@ -182,7 +181,7 @@ func initAggregatorContext(ctx sdk.Context, agc *aggregator.AggregatorContext, k
 	// set validatorPower cache
 	c.AddCache(cache.ItemV(validatorPowers))
 
-	agc.PrepareRoundEndBlock(ctx.BlockHeight()-1, false)
+	agc.PrepareRoundEndBlock(ctx.BlockHeight()-1, 0)
 }
 
 func (k *Keeper) ResetAggregatorContext() {
