@@ -389,7 +389,7 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 		am.keeper.ResetUpdatedFeederIDs()
 	}
 
-	newRoundFeederIDs := agc.PrepareRoundEndBlock(uint64(ctx.BlockHeight()), false)
+	newRoundFeederIDs := agc.PrepareRoundEndBlock(ctx.BlockHeight(), false)
 	for _, feederID := range newRoundFeederIDs {
 		am.keeper.AddZeroNonceItemWithFeederIDForValidators(ctx, feederID, agc.GetValidators())
 	}

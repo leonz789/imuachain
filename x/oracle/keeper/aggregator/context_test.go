@@ -29,7 +29,7 @@ func TestAggregatorContext(t *testing.T) {
 					time.Sleep(1 * time.Second)
 					patchBlockHeight(10 + int64(common.MaxNonce) + 1)
 
-					agc.PrepareRoundEndBlock(uint64(10+common.MaxNonce), false)
+					agc.PrepareRoundEndBlock(10+int64(common.MaxNonce), false)
 					So(agc.rounds[1].status, ShouldEqual, 2)
 				})
 				p.Reset()
@@ -38,7 +38,7 @@ func TestAggregatorContext(t *testing.T) {
 			Convey("pepare outside the window", func() {
 				Convey("for empty round list", func() {
 					p := patchBlockHeight(10 + int64(common.MaxNonce) + 1)
-					agc.PrepareRoundEndBlock(uint64(10+common.MaxNonce), false)
+					agc.PrepareRoundEndBlock(10+int64(common.MaxNonce), false)
 					So(agc.rounds[1].status, ShouldEqual, 2)
 					p.Reset()
 					time.Sleep(1 * time.Second)

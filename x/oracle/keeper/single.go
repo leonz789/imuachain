@@ -107,7 +107,7 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 
 		delta := uint64(0)
 		if from > int64(oracleParams.MaxNonce) {
-			delta = uint64(from) - uint64(common.MaxNonce)
+			delta = uint64(from) - uint64(oracleParams.MaxNonce)
 		}
 
 		if latestValidatorUpdateBlock.Block > delta {
@@ -127,7 +127,7 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 				}
 			}
 
-			agc.PrepareRoundEndBlock(uint64(from-1), forceSealed)
+			agc.PrepareRoundEndBlock(from-1, forceSealed)
 
 			if msgs := recentMsgs[from]; msgs != nil {
 				for _, msg := range msgs {
@@ -153,11 +153,7 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 			}
 		}
 
-		endHeight := uint64(0)
-		if to > 1 {
-			endHeight = uint64(to - 1)
-		}
-		agc.PrepareRoundEndBlock(endHeight, forceSealed)
+		agc.PrepareRoundEndBlock(to-1, forceSealed)
 	}
 
 	var pRet cache.ItemP
@@ -195,7 +191,7 @@ func initAggregatorContext(ctx sdk.Context, agc *aggregator.AggregatorContext, k
 	// set validatorPower cache
 	c.AddCache(cache.ItemV(validatorPowers))
 
-	agc.PrepareRoundEndBlock(uint64(ctx.BlockHeight())-1, false)
+	agc.PrepareRoundEndBlock(ctx.BlockHeight()-1, false)
 }
 
 func (k *Keeper) ResetAggregatorContext() {

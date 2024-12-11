@@ -267,24 +267,25 @@ func (agc *AggregatorContext) SealRound(ctx sdk.Context, force bool) (success []
 
 // PrepareEndBlock is called at EndBlock stage, to prepare the roundInfo for the next block(of input block)
 // func (agc *AggregatorContext) PrepareRoundEndBlock(ctx sdk.Context, block uint64) {
-func (agc *AggregatorContext) PrepareRoundEndBlock(block uint64, forceSealed bool) (newRoundFeederIDs []uint64) {
+func (agc *AggregatorContext) PrepareRoundEndBlock(block int64, forceSealed bool) (newRoundFeederIDs []uint64) {
 	if block < 1 {
 		return newRoundFeederIDs
 	}
+	blockUint64 := uint64(block)
 
 	for feederID, feeder := range agc.params.GetTokenFeeders() {
 		if feederID == 0 {
 			continue
 		}
-		if (feeder.EndBlock > 0 && feeder.EndBlock <= block) || feeder.StartBaseBlock > block {
+		if (feeder.EndBlock > 0 && feeder.EndBlock <= blockUint64) || feeder.StartBaseBlock > blockUint64 {
 			// this feeder is inactive
 			continue
 		}
 
-		delta := block - feeder.StartBaseBlock
+		delta := blockUint64 - feeder.StartBaseBlock
 		left := delta % feeder.Interval
 		count := delta / feeder.Interval
-		latestBasedblock := block - left
+		latestBasedblock := blockUint64 - left
 		latestNextRoundID := feeder.StartRoundID + count
 
 		feederIDUint64 := uint64(feederID)
