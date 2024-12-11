@@ -303,12 +303,11 @@ func (agc *AggregatorContext) PrepareRoundEndBlock(block int64, forceSealed bool
 				round.status = roundStatusClosed
 			} else {
 				round.status = roundStatusOpen
-				if forceSealed {
-					round.status = roundStatusClosed
-				}
 				if left == 0 {
 					// set nonce for corresponding feederID for new roud start
 					newRoundFeederIDs = append(newRoundFeederIDs, feederIDUint64)
+				} else if forceSealed {
+					round.status = roundStatusClosed
 				}
 			}
 			agc.rounds[feederIDUint64] = round
