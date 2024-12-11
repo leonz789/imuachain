@@ -144,9 +144,8 @@ func (k Keeper) recacheAggregatorContext(ctx sdk.Context, agc *aggregator.Aggreg
 				setCommonParams(p)
 			}
 		}
-
-		agc.PrepareRoundEndBlock(to-1, forceSealed)
 	}
+	agc.PrepareRoundEndBlock(to-1, forceSealed)
 
 	var pRet cache.ItemP
 	if updated := c.GetCache(&pRet); !updated {
