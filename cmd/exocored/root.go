@@ -27,6 +27,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
+	"github.com/cosmos/cosmos-sdk/server"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/snapshots"
@@ -161,7 +162,8 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 					}
 				}()
 				mnemonic, _ := cmd.Flags().GetString(flagMnemonic)
-				pricefeeder.StartPriceFeeder(path.Join(clientCtx.HomeDir, confPath, confOracle), mnemonic, path.Join(clientCtx.HomeDir, confPath))
+				serverCtx := server.GetServerContextFromCmd(cmd)
+				pricefeeder.StartPriceFeeder(path.Join(clientCtx.HomeDir, confPath, confOracle), mnemonic, path.Join(clientCtx.HomeDir, confPath), serverCtx.Logger.With("module", "price-feeder"))
 			}()
 		}
 		return preRunE(cmd, args)
