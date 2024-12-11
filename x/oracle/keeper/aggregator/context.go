@@ -252,10 +252,6 @@ func (agc *AggregatorContext) SealRound(ctx sdk.Context, force bool) (success []
 					}
 					// TODO: optimize operformance
 					sealed = append(sealed, feederID)
-					//					if !windowClosedMap[feederID] {
-					//						// this should be clear after performanceReview
-					//						agc.RemoveWorker(feederID)
-					//					}
 				}
 			default:
 				ctx.Logger().Info("mode other than 1 is not support now")
