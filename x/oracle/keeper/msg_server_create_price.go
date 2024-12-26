@@ -2,8 +2,11 @@ package keeper
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ExocoreNetwork/exocore/x/oracle/types"
@@ -62,10 +65,18 @@ func (ms msgServer) CreatePrice(goCtx context.Context, msg *types.MsgCreatePrice
 		decimalStr := strconv.FormatInt(int64(newItem.PriceTR.Decimal), 10)
 		tokenIDStr := strconv.FormatUint(newItem.TokenID, 10)
 		roundIDStr := strconv.FormatUint(newItem.PriceTR.RoundID, 10)
+		priceStr := newItem.PriceTR.Price
+
+		if len(newItem.PriceTR.Price) >= 32 {
+			hash := sha256.New()
+			hash.Write([]byte(newItem.PriceTR.Price))
+			priceStr = base64.StdEncoding.EncodeToString(hash.Sum(nil))
+
+		}
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
 			types.EventTypeCreatePrice,
 			sdk.NewAttribute(types.AttributeKeyRoundID, roundIDStr),
-			sdk.NewAttribute(types.AttributeKeyFinalPrice, tokenIDStr+"_"+roundIDStr+"_"+newItem.PriceTR.Price+"_"+decimalStr),
+			sdk.NewAttribute(types.AttributeKeyFinalPrice, strings.Join([]string{tokenIDStr, roundIDStr, priceStr, decimalStr}, "_")),
 			sdk.NewAttribute(types.AttributeKeyPriceUpdated, types.AttributeValuePriceUpdatedSuccess)),
 		)
 		if !ctx.IsCheckTx() {

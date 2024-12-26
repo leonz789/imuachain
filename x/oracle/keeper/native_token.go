@@ -254,11 +254,13 @@ func (k Keeper) UpdateNSTValidatorListForStaker(ctx sdk.Context, assetID, staker
 	} else {
 		eventValue = fmt.Sprintf("%s_%s", types.AttributeValueNativeTokenWithdraw, eventValue)
 	}
-	// emit an event to tell a new valdiator added/or a validator is removed for the staker
+	// emit an event to tell the details that a new valdiator added/or a validator is removed for the staker
+	// deposit_stakerID_validatorKey
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeCreatePrice,
 		sdk.NewAttribute(types.AttributeKeyNativeTokenChange, eventValue),
 	))
+
 	return nil
 }
 
@@ -295,12 +297,8 @@ func (k Keeper) UpdateNSTByBalanceChange(ctx sdk.Context, assetID string, rawDat
 			newBalance = *(stakerInfo.BalanceList[length-1])
 		}
 		newBalance.Block = uint64(ctx.BlockHeight())
-		if newBalance.RoundID == roundID {
-			newBalance.Index++
-		} else {
-			newBalance.RoundID = roundID
-			newBalance.Index = 0
-		}
+		// we set index as a global reference used through all rounds
+		newBalance.Index++
 		newBalance.Change = types.Action_ACTION_SLASH_REFUND
 		// balance update are based on initial/max effective balance: 32
 		maxBalance := maxEffectiveBalance(assetID) * (len(stakerInfo.ValidatorPubkeyList))
