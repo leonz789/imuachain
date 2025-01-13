@@ -6,6 +6,29 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+func (k Keeper) SetParamsForCache(ctx sdk.Context, params types.RecentParams) {
+	block := uint64(ctx.BlockHeight())
+	index, found := k.GetIndexRecentParams(ctx)
+	if found {
+		i := 0
+		// if the maxNonce is changed in this block, all rounds would be force sealed, so it's ok to use either the old or new maxNonce
+		maxNonce := k.GetParams(ctx).MaxNonce
+		for ; i < len(index.Index); i++ {
+			b := index.Index[i]
+			// #nosec G115  // maxNonce is not negative
+			if b > block-uint64(maxNonce) {
+				break
+			}
+			// remove old recentParams
+			k.RemoveRecentParams(ctx, b)
+		}
+		index.Index = index.Index[i:]
+	}
+	index.Index = append(index.Index, block)
+	k.SetIndexRecentParams(ctx, index)
+	k.SetRecentParams(ctx, params)
+}
+
 // SetRecentParams set a specific recentParams in the store from its index
 func (k Keeper) SetRecentParams(ctx sdk.Context, recentParams types.RecentParams) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefix(types.RecentParamsKeyPrefix))
@@ -76,4 +99,43 @@ func (k Keeper) GetAllRecentParamsAsMap(ctx sdk.Context) (result map[int64]*type
 	}
 
 	return
+}
+
+// GetRecentParamsWithinMaxNonce returns all recentParams within the maxNonce and the latest recentParams separately
+func (k Keeper) GetRecentParamsWithinMaxNonce(ctx sdk.Context) (recentParamsList []*types.RecentParams, prev, latest types.RecentParams) {
+	maxNonce := k.GetParams(ctx).MaxNonce
+	var startHeight uint64
+	if uint64(ctx.BlockHeight()) > uint64(maxNonce) {
+		startHeight = uint64(ctx.BlockHeight()) - uint64(maxNonce)
+	}
+	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefix(types.RecentParamsKeyPrefix))
+	iterator := sdk.KVStorePrefixIterator(store, []byte{})
+
+	defer iterator.Close()
+
+	recentParamsList = make([]*types.RecentParams, 0, maxNonce)
+	notFound := true
+	for ; iterator.Valid(); iterator.Next() {
+		var val types.RecentParams
+		k.cdc.MustUnmarshal(iterator.Value(), &val)
+		latest = val
+		if notFound {
+			prev = val
+		}
+		if val.Block >= startHeight {
+			if notFound {
+				notFound = false
+			}
+			recentParamsList = append(recentParamsList, &val)
+		}
+		if notFound {
+			prev = val
+		}
+	}
+	if len(recentParamsList) > 0 {
+		if prev.Block == recentParamsList[0].Block {
+			prev = types.RecentParams{}
+		}
+	}
+	return recentParamsList, prev, latest
 }
