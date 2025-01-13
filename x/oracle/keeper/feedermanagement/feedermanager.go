@@ -416,7 +416,8 @@ func (f *FeederManager) handleQuotingMisBehavior(ctx sdk.Context) {
 				if height > minHeight && reportedInfo.MissedRoundsCounter > maxMissed {
 					consAddr, err := sdk.ConsAddressFromBech32(validator)
 					if err != nil {
-						panic("invalid consAddr string")
+						f.k.Logger(ctx).Error("when do orale_performance_review, got invalid consAddr string. This should never happen", "validatorStr", validator)
+						continue
 					}
 					operator := f.k.ValidatorByConsAddr(ctx, consAddr)
 					if operator != nil && !operator.IsJailed() {
@@ -441,7 +442,7 @@ func (f *FeederManager) handleQuotingMisBehavior(ctx sdk.Context) {
 					} else {
 						// validator was (a) not found or (b) already jailed so we do not slash
 						logger.Info(
-							"validator would have been slashed for too many missed repoerting price, but was either not found in store or already jailed",
+							"validator would have been slashed for too many missed reporting price, but was either not found in store or already jailed",
 							"validator", validator,
 						)
 					}
