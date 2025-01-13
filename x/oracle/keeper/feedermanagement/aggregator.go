@@ -252,7 +252,9 @@ func (rv *recordsValidators) GetFinalPriceForValidators(algo AggAlgorithm) (map[
 		}
 		ret[validator] = finalPrice
 	}
-	rv.finalPrices = ret
+	if len(ret) > 0 {
+		rv.finalPrices = ret
+	}
 	return ret, true
 }
 

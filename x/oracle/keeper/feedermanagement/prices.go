@@ -173,9 +173,10 @@ func (pv *priceValidator) GetFinalPrice(algo AggAlgorithm) (*PriceResult, bool) 
 		}
 	}
 	if ret := algo.GetResult(); ret != nil {
-		pv.finalPrice = algo.GetResult()
+		pv.finalPrice = ret
+		return ret, true
 	}
-	return pv.finalPrice, true
+	return nil, false
 }
 
 func (pv *priceValidator) UpdateFinalPriceForDS(sourceID int64, finalPrice *PriceResult) bool {

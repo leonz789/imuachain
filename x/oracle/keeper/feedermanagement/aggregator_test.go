@@ -201,7 +201,7 @@ func TestAggregation(t *testing.T) {
 
 		})
 		Convey("add msgs in aggregator", func() {
-			a := newAggregator(th)
+			a := newAggregator(th, defaultAggMedian)
 			err := a.AddMsg(msgItem1)
 			So(err, ShouldBeNil)
 			finalPrice, ok := a.GetFinalPrice()
@@ -246,7 +246,7 @@ func TestAggregation(t *testing.T) {
 				Return(true).
 				AnyTimes()
 
-			r := tData.NewRound()
+			r := tData.NewRound(nil)
 			r.cache = c
 			feederID := r.feederID
 			Convey("add msg in closed quoting window", func() {
