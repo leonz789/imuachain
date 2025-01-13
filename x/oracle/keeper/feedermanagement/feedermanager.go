@@ -1,6 +1,7 @@
 package feedermanagement
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -493,7 +494,7 @@ func (f *FeederManager) updateRoundsParamsAndAddNewRounds(ctx sdk.Context) {
 			if _, ok := existsFeederIDs[feederID]; !ok && (tokenFeeder.EndBlock == 0 || tokenFeeder.EndBlock > uint64(height)) {
 				logger.Info("[mem] add new round", "feederID", feederID, "height", height)
 				f.sortedFeederIDs = append(f.sortedFeederIDs, feederID)
-				f.rounds[feederID] = newRound(feederID, tokenFeeder, int64(params.MaxNonce), f.cs)
+				f.rounds[feederID] = newRound(feederID, tokenFeeder, int64(params.MaxNonce), f.cs, NewAggMedian())
 			}
 		}
 		f.sortedFeederIDs.sort()
@@ -558,15 +559,73 @@ func (f *FeederManager) SetForceSeal() {
 	f.forceSeal = true
 }
 
-//nolint:revive
 func (f *FeederManager) ValidateMsg(msg *oracletypes.MsgCreatePrice) error {
 	// TODO: implement me
+	// nonce, feederID, creator has been verified by anteHandler
+	// baseBlock is going to be verified by its corresponding round
+	decimal, err := f.cs.GetDecimalFromFeederID(msg.FeederID)
+	if err != nil {
+		return err
+	}
+	for _, ps := range msg.Prices {
+		// #nosec G115
+		deterministic, err := f.cs.IsDeterministic(int64(ps.SourceID))
+		if err != nil {
+			return err
+		}
+		l := len(ps.Prices)
+		if deterministic {
+			if l == 0 {
+				return fmt.Errorf("source:id_%d has no valid price, empty list", ps.SourceID)
+			}
+			if l > int(f.cs.GetMaxNonce()) {
+				return fmt.Errorf("deterministic source:id_%d must provide no more than %d prices from different DetIDs, got:%d", ps.SourceID, f.cs.GetMaxNonce(), l)
+			}
+			seenDetIDs := make(map[string]struct{})
+			for _, p := range ps.Prices {
+				if _, ok := seenDetIDs[p.DetID]; ok {
+					return errors.New("duplicated detIDs")
+				}
+				if len(p.Price) == 0 {
+					return errors.New("price must not be empty")
+				}
+				if len(p.DetID) == 0 {
+					return errors.New("detID of deteministic price must not be empty")
+				}
+				if p.Decimal != decimal {
+					return fmt.Errorf("decimal not match for feederID:%d, expect:%d, got:%d", msg.FeederID, decimal, p.Decimal)
+				}
+				seenDetIDs[p.DetID] = struct{}{}
+			}
+		} else {
+			// NOTE: v1 does not actually have this type of sources
+			if l != 1 {
+				return fmt.Errorf("non-deteministic sources should provide exactly one valid price, got:%d", len(ps.Prices))
+			}
+			p := ps.Prices[0]
+			if len(p.Price) == 0 {
+				return errors.New("price must not be empty")
+			}
+			if p.Decimal != decimal {
+				return fmt.Errorf("decimal not match for feederID:%d, expect:%d, got:%d", msg.FeederID, decimal, p.Decimal)
+			}
+			if len(p.DetID) > 0 {
+				return errors.New("price from non-deterministic should not have detID")
+			}
+			if len(p.Timestamp) == 0 {
+				return errors.New("price from non-deterministic must have timestamp")
+			}
+		}
+	}
 	return nil
 }
 
 func (f *FeederManager) ProcessQuote(ctx sdk.Context, msg *oracletypes.MsgCreatePrice, isCheckTx bool) (*oracletypes.PriceTimeRound, error) {
 	if isCheckTx {
 		f = f.getCheckTx()
+	}
+	if err := f.ValidateMsg(msg); err != nil {
+		return nil, oracletypes.ErrInvalidMsg.Wrap(err.Error())
 	}
 	msgItem := getProtoMsgItemFromQuote(msg)
 
@@ -702,7 +761,7 @@ func (f *FeederManager) recovery(ctx sdk.Context) bool {
 			continue
 		}
 		tfID := int64(tfID)
-		f.rounds[tfID] = newRound(tfID, tf, int64(params.MaxNonce), f.cs)
+		f.rounds[tfID] = newRound(tfID, tf, int64(params.MaxNonce), f.cs, NewAggMedian())
 		f.sortedFeederIDs.add(tfID)
 	}
 	f.prepareRounds(ctxReplay)

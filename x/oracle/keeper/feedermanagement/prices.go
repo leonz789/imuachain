@@ -40,18 +40,22 @@ func (p *PriceResult) ProtoPriceTimeRound(roundID int64, timestamp string) *orac
 	}
 }
 
-func getPriceSourceFromProto(ps *oracletypes.PriceSource, checker sourceChecker) *priceSource {
+func getPriceSourceFromProto(ps *oracletypes.PriceSource, checker sourceChecker) (*priceSource, error) {
 	prices := make([]*PriceInfo, 0, len(ps.Prices))
+	deterministic, err := checker.IsDeterministic(int64(ps.SourceID))
+	if err != nil {
+		return nil, err
+	}
 	for _, p := range ps.Prices {
 		prices = append(prices, GetPriceInfoFromProtoPriceTimeDetID(p))
 	}
 	return &priceSource{
 		// #nosec G115
-		deterministic: checker.IsDeterministic(int64(ps.SourceID)),
+		deterministic: deterministic,
 		// #nosec G115
 		sourceID: int64(ps.SourceID),
 		prices:   prices,
-	}
+	}, nil
 }
 
 func newPriceValidator(validator string, power *big.Int) *priceValidator {
@@ -147,7 +151,7 @@ func (pv *priceValidator) ApplyAddedPriceSources(psMap map[int64]*priceSource) {
 }
 
 // TODO: V2: check valdiator has provided all sources required by rules(defined in oracle.params)
-func (pv *priceValidator) GetFinalPrice() (*PriceResult, bool) {
+func (pv *priceValidator) GetFinalPrice(algo AggAlgorithm) (*PriceResult, bool) {
 	if pv.finalPrice != nil {
 		return pv.finalPrice, true
 	}
@@ -159,19 +163,23 @@ func (pv *priceValidator) GetFinalPrice() (*PriceResult, bool) {
 		keySlice = append(keySlice, sourceID)
 	}
 	slices.Sort(keySlice)
+	algo.Reset()
 	for _, sourceID := range keySlice {
 		price := pv.priceSources[sourceID]
 		if price.finalPrice == nil {
-			defaultAggMedian.Reset()
+			algo.Reset()
 			return nil, false
 		}
-		if !defaultAggMedian.Add(price.finalPrice) {
-			defaultAggMedian.Reset()
+		if !algo.Add(price.finalPrice) {
+			algo.Reset()
 			return nil, false
 		}
 	}
-	pv.finalPrice = defaultAggMedian.GetResult()
-	return pv.finalPrice, true
+	if ret := algo.GetResult(); ret != nil {
+		pv.finalPrice = ret
+		return ret, true
+	}
+	return nil, false
 }
 
 func (pv *priceValidator) UpdateFinalPriceForDS(sourceID int64, finalPrice *PriceResult) bool {

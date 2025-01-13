@@ -30,7 +30,7 @@ func (b BigIntList) Median() *big.Int {
 }
 
 type AggAlgorithm interface {
-	Add(*PriceInfo) bool
+	Add(*PriceResult) bool
 	GetResult() *PriceResult
 	Reset()
 }
@@ -106,7 +106,6 @@ func (a *AggMedian) GetResult() *PriceResult {
 	}
 	if a.t == number {
 		result := BigIntList(a.list).Median().String()
-		//
 		decimal := a.decimal
 		return &PriceResult{
 			Price:   result,
