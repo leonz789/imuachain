@@ -92,7 +92,7 @@ func TestAggregation(t *testing.T) {
 					So(rv.records["validator2"], ShouldResemble, &priceValidator{validator: "validator2", power: big1, priceSources: map[int64]*priceSource{1: ps5}})
 					So(rv.accumulatedPower, ShouldResemble, big2)
 					Convey("calculate final price without confirmed ds price, fail", func() {
-						finalPrice, err := rv.GetFinalPrice()
+						finalPrice, err := rv.GetFinalPrice(defaultAggMedian)
 						So(finalPrice, ShouldBeNil)
 						So(err, ShouldBeFalse)
 					})
@@ -102,7 +102,7 @@ func TestAggregation(t *testing.T) {
 							rv.UpdateFinalPriceForDS(1, pr1)
 							So(rv.records["validator1"].priceSources[1].finalPrice, ShouldResemble, pr1)
 							So(rv.records["validator2"].priceSources[1].finalPrice, ShouldResemble, pr1)
-							finalPrice, err := rv.GetFinalPrice()
+							finalPrice, err := rv.GetFinalPrice(defaultAggMedian)
 							So(finalPrice, ShouldResemble, pr1_2)
 							So(err, ShouldBeTrue)
 						})
@@ -201,7 +201,7 @@ func TestAggregation(t *testing.T) {
 
 		})
 		Convey("add msgs in aggregator", func() {
-			a := newAggregator(th)
+			a := newAggregator(th, defaultAggMedian)
 			err := a.AddMsg(msgItem1)
 			So(err, ShouldBeNil)
 			finalPrice, ok := a.GetFinalPrice()
@@ -235,7 +235,7 @@ func TestAggregation(t *testing.T) {
 				AnyTimes()
 			c.EXPECT().
 				IsDeterministic(gomock.Eq(int64(1))).
-				Return(true).
+				Return(true, nil).
 				AnyTimes()
 			c.EXPECT().
 				GetThreshold().
@@ -246,7 +246,7 @@ func TestAggregation(t *testing.T) {
 				Return(true).
 				AnyTimes()
 
-			r := tData.NewRound()
+			r := tData.NewRound(c)
 			r.cache = c
 			feederID := r.feederID
 			Convey("add msg in closed quoting window", func() {

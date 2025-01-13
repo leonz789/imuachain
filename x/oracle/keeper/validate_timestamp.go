@@ -2,7 +2,7 @@ package keeper
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/ExocoreNetwork/exocore/x/oracle/types"
@@ -16,14 +16,14 @@ func checkTimestamp(goCtx context.Context, msg *types.MsgCreatePrice) error {
 		for _, price := range ps.Prices {
 			ts := price.Timestamp
 			if len(ts) == 0 {
-				return errors.New("timestamp should not be empty")
+				return fmt.Errorf("timestamp should not be empty, blockTime:%s, got:%s", now.Format(layout), ts)
 			}
 			t, err := time.ParseInLocation(layout, ts, time.UTC)
 			if err != nil {
-				return errors.New("timestamp format invalid")
+				return fmt.Errorf("timestamp format invalid, blockTime:%s, got:%s", now.Format(layout), ts)
 			}
 			if now.Add(maxFutureOffset).Before(t) {
-				return errors.New("timestamp is in the future")
+				return fmt.Errorf("timestamp is in the future, blockTime:%s, got:%s", now.Format(layout), ts)
 			}
 		}
 	}

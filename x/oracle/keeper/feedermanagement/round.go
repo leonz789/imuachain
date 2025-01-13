@@ -6,7 +6,7 @@ import (
 	oracletypes "github.com/ExocoreNetwork/exocore/x/oracle/types"
 )
 
-func newRound(feederID int64, tokenFeeder *oracletypes.TokenFeeder, quoteWindowSize int64, cache CacheReader) *round {
+func newRound(feederID int64, tokenFeeder *oracletypes.TokenFeeder, quoteWindowSize int64, cache CacheReader, algo AggAlgorithm) *round {
 	return &round{
 		// #nosec G115
 		startBaseBlock: int64(tokenFeeder.StartBaseBlock),
@@ -27,6 +27,7 @@ func newRound(feederID int64, tokenFeeder *oracletypes.TokenFeeder, quoteWindowS
 		a:              nil,
 		roundBaseBlock: 0,
 		roundID:        0,
+		algo:           algo,
 	}
 }
 
@@ -72,7 +73,11 @@ func (r *round) getMsgItemFromProto(msg *oracletypes.MsgItem) (*MsgItem, error) 
 	}
 	priceSources := make([]*priceSource, 0, len(msg.PSources))
 	for _, ps := range msg.PSources {
-		priceSources = append(priceSources, getPriceSourceFromProto(ps, r.cache))
+		psNew, err := getPriceSourceFromProto(ps, r.cache)
+		if err != nil {
+			return nil, err
+		}
+		priceSources = append(priceSources, psNew)
 	}
 	return &MsgItem{
 		// #nosec G115
@@ -171,7 +176,7 @@ func (r *round) PrepareForNextBlock(currentHeight int64) (open bool) {
 
 func (r *round) openQuotingWindow() {
 	r.status = roundStatusOpen
-	r.a = newAggregator(r.cache.GetThreshold())
+	r.a = newAggregator(r.cache.GetThreshold(), r.algo)
 }
 
 // IsQuotingWindowOpen returns if the round is inside its current quoting window including status of {open, committable, close}

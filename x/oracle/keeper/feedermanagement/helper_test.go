@@ -23,9 +23,9 @@ var (
 	th        = &threshold{big4, big2, big3}
 )
 
-func (t *Test) NewFeederManager() *FeederManager {
+func (t *Test) NewFeederManager(cs CacheReader) *FeederManager {
 	f := NewFeederManager(nil)
-	round := t.NewRound()
+	round := t.NewRound(cs)
 	f.rounds[round.feederID] = round
 	// prepare this Round
 	round.PrepareForNextBlock(int64(params.TokenFeeders[int(round.feederID)].StartBaseBlock))
@@ -87,7 +87,7 @@ func (t *Test) NewRecordsValidators(filled bool) *recordsValidators {
 }
 
 func (t *Test) NewAggregator(filled bool) *aggregator {
-	ret := newAggregator(th)
+	ret := newAggregator(th, defaultAggMedian)
 	if filled {
 		ret.v = t.NewRecordsValidators(filled)
 		ret.ds = t.NewRecordsDSs(filled)
@@ -95,9 +95,9 @@ func (t *Test) NewAggregator(filled bool) *aggregator {
 	return ret
 }
 
-func (t *Test) NewRound() *round {
+func (t *Test) NewRound(cs CacheReader) *round {
 	feederID := r.Intn(len(params.TokenFeeders)-1) + 1
-	round := newRound(int64(feederID), params.TokenFeeders[feederID], int64(params.MaxNonce), nil)
+	round := newRound(int64(feederID), params.TokenFeeders[feederID], int64(params.MaxNonce), cs, defaultAggMedian)
 	return round
 }
 

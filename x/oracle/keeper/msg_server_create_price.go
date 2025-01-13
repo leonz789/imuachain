@@ -15,7 +15,7 @@ import (
 
 const (
 	layout          = "2006-01-02 15:04:05"
-	maxFutureOffset = 5 * time.Second
+	maxFutureOffset = 30 * time.Second
 )
 
 // CreatePrice proposes price for new round of specific tokenFeeder
