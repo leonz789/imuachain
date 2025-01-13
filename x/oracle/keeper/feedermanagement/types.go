@@ -20,7 +20,7 @@ type CacheReader interface {
 	GetTotalPower() (totalPower *big.Int)
 	GetValidators() []string
 	IsRuleV1(feederID int64) bool
-	IsDeterministic(sournceID int64) bool
+	IsDeterministic(sournceID int64) (bool, error)
 	GetThreshold() *threshold
 }
 
@@ -142,7 +142,9 @@ type aggregator struct {
 	finalPrice *PriceResult
 	v          *recordsValidators
 	ds         *recordsDSs
+	algo       AggAlgorithm
 }
+
 type roundStatus int32
 
 const (
@@ -167,6 +169,7 @@ type round struct {
 	status         roundStatus
 	a              *aggregator
 	cache          CacheReader
+	algo           AggAlgorithm
 }
 
 type orderedSliceInt64 []int64

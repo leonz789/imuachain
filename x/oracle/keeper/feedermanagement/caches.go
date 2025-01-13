@@ -1,6 +1,7 @@
 package feedermanagement
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -61,13 +62,25 @@ func (c *caches) Init(k Submitter, params *oracletypes.Params, validators map[st
 	c.validators.add(validators)
 }
 
-func (c *caches) IsDeterministic(sourceID int64) bool {
-	sources := c.params.params.Sources
-	if sourceID >= int64(len(sources)) {
-		return false
+func (c *caches) GetDecimalFromFeederID(feederID uint64) (int32, error) {
+	p := c.params.params
+	if feederID <= 0 || feederID > uint64(len(p.TokenFeeders)) {
+		return 0, errors.New("feederID not exists")
 	}
+	tf := p.TokenFeeders[feederID]
+	return p.Tokens[tf.TokenID].Decimal, nil
+}
 
-	return sources[sourceID].Deterministic
+func (c *caches) GetMaxNonce() int32 {
+	return c.params.params.GetMaxNonce()
+}
+
+func (c *caches) IsDeterministic(sourceID int64) (bool, error) {
+	sources := c.params.params.Sources
+	if sourceID >= int64(len(sources)) || sourceID <= 0 {
+		return false, errors.New("invalid sourceID")
+	}
+	return sources[sourceID].Deterministic, nil
 }
 
 // RuleV1, we restrict the source to be Chainlink and only that source is acceptable

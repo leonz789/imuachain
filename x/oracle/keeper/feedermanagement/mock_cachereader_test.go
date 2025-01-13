@@ -98,11 +98,12 @@ func (mr *MockCacheReaderMockRecorder) GetValidators() *gomock.Call {
 }
 
 // IsDeterministic mocks base method.
-func (m *MockCacheReader) IsDeterministic(sournceID int64) bool {
+func (m *MockCacheReader) IsDeterministic(sournceID int64) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsDeterministic", sournceID)
 	ret0, _ := ret[0].(bool)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // IsDeterministic indicates an expected call of IsDeterministic.
