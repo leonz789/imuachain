@@ -142,6 +142,7 @@ type aggregator struct {
 	finalPrice *PriceResult
 	v          *recordsValidators
 	ds         *recordsDSs
+	algo       AggAlgorithm
 }
 type roundStatus int32
 
@@ -167,6 +168,7 @@ type round struct {
 	status         roundStatus
 	a              *aggregator
 	cache          CacheReader
+	algo           AggAlgorithm
 }
 
 type orderedSliceInt64 []int64

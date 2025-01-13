@@ -493,7 +493,7 @@ func (f *FeederManager) updateRoundsParamsAndAddNewRounds(ctx sdk.Context) {
 			if _, ok := existsFeederIDs[feederID]; !ok && (tokenFeeder.EndBlock == 0 || tokenFeeder.EndBlock > uint64(height)) {
 				logger.Info("[mem] add new round", "feederID", feederID, "height", height)
 				f.sortedFeederIDs = append(f.sortedFeederIDs, feederID)
-				f.rounds[feederID] = newRound(feederID, tokenFeeder, int64(params.MaxNonce), f.cs)
+				f.rounds[feederID] = newRound(feederID, tokenFeeder, int64(params.MaxNonce), f.cs, NewAggMedian())
 			}
 		}
 		f.sortedFeederIDs.sort()

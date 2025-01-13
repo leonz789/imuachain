@@ -147,7 +147,7 @@ func (pv *priceValidator) ApplyAddedPriceSources(psMap map[int64]*priceSource) {
 }
 
 // TODO: V2: check valdiator has provided all sources required by rules(defined in oracle.params)
-func (pv *priceValidator) GetFinalPrice() (*PriceResult, bool) {
+func (pv *priceValidator) GetFinalPrice(algo AggAlgorithm) (*PriceResult, bool) {
 	if pv.finalPrice != nil {
 		return pv.finalPrice, true
 	}
@@ -159,18 +159,22 @@ func (pv *priceValidator) GetFinalPrice() (*PriceResult, bool) {
 		keySlice = append(keySlice, sourceID)
 	}
 	slices.Sort(keySlice)
+	// safe to call multiple times
+	algo.Reset()
 	for _, sourceID := range keySlice {
 		price := pv.priceSources[sourceID]
 		if price.finalPrice == nil {
-			defaultAggMedian.Reset()
+			algo.Reset()
 			return nil, false
 		}
-		if !defaultAggMedian.Add(price.finalPrice) {
-			defaultAggMedian.Reset()
+		if !algo.Add(price.finalPrice) {
+			algo.Reset()
 			return nil, false
 		}
 	}
-	pv.finalPrice = defaultAggMedian.GetResult()
+	if ret := algo.GetResult(); ret != nil {
+		pv.finalPrice = algo.GetResult()
+	}
 	return pv.finalPrice, true
 }
 

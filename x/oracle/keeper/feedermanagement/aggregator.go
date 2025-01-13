@@ -13,9 +13,10 @@ type sourceChecker interface {
 	IsDeterministic(sourceID int64) bool
 }
 
-func newAggregator(t *threshold) *aggregator {
+func newAggregator(t *threshold, algo AggAlgorithm) *aggregator {
 	return &aggregator{
 		t:          t,
+		algo:       algo,
 		finalPrice: nil,
 		v:          newRecordsValidators(),
 		ds:         newRecordsDSs(t),
@@ -71,7 +72,7 @@ func (a *aggregator) GetFinalPrice() (*PriceResult, bool) {
 	if !a.exceedPowerLimit() {
 		return nil, false
 	}
-	finalPrice, ok := a.v.GetFinalPrice()
+	finalPrice, ok := a.v.GetFinalPrice(a.algo)
 	if ok {
 		a.finalPrice = finalPrice
 	}
@@ -213,23 +214,24 @@ func (rv *recordsValidators) GetValidatorQuotePricesForSourceID(validator string
 	return pSource.prices, true
 }
 
-func (rv *recordsValidators) GetFinalPrice() (*PriceResult, bool) {
+func (rv *recordsValidators) GetFinalPrice(algo AggAlgorithm) (*PriceResult, bool) {
 	if rv.finalPrice != nil {
 		return rv.finalPrice, true
 	}
-	if prices, ok := rv.GetFinalPriceForValidators(); ok {
+	if prices, ok := rv.GetFinalPriceForValidators(algo); ok {
 		keySlice := make([]string, 0, len(prices))
 		for validator := range prices {
 			keySlice = append(keySlice, validator)
 		}
+		algo.Reset()
 		slices.Sort(keySlice)
 		for _, validator := range keySlice {
-			if !defaultAggMedian.Add(prices[validator]) {
-				defaultAggMedian.Reset()
+			if !algo.Add(prices[validator]) {
+				algo.Reset()
 				return nil, false
 			}
 		}
-		rv.finalPrice = defaultAggMedian.GetResult()
+		rv.finalPrice = algo.GetResult()
 		if rv.finalPrice == nil {
 			return nil, false
 		}
@@ -238,13 +240,13 @@ func (rv *recordsValidators) GetFinalPrice() (*PriceResult, bool) {
 	return nil, false
 }
 
-func (rv *recordsValidators) GetFinalPriceForValidators() (map[string]*PriceResult, bool) {
+func (rv *recordsValidators) GetFinalPriceForValidators(algo AggAlgorithm) (map[string]*PriceResult, bool) {
 	if len(rv.finalPrices) > 0 {
 		return rv.finalPrices, true
 	}
 	ret := make(map[string]*PriceResult)
 	for validator, pv := range rv.records {
-		finalPrice, ok := pv.GetFinalPrice()
+		finalPrice, ok := pv.GetFinalPrice(algo)
 		if !ok {
 			return nil, false
 		}
