@@ -702,7 +702,7 @@ func (f *FeederManager) recovery(ctx sdk.Context) bool {
 			continue
 		}
 		tfID := int64(tfID)
-		f.rounds[tfID] = newRound(tfID, tf, int64(params.MaxNonce), f.cs)
+		f.rounds[tfID] = newRound(tfID, tf, int64(params.MaxNonce), f.cs, NewAggMedian())
 		f.sortedFeederIDs.add(tfID)
 	}
 	f.prepareRounds(ctxReplay)

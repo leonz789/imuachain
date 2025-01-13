@@ -87,7 +87,7 @@ func (t *Test) NewRecordsValidators(filled bool) *recordsValidators {
 }
 
 func (t *Test) NewAggregator(filled bool) *aggregator {
-	ret := newAggregator(th)
+	ret := newAggregator(th, NewAggMedian())
 	if filled {
 		ret.v = t.NewRecordsValidators(filled)
 		ret.ds = t.NewRecordsDSs(filled)
@@ -97,7 +97,7 @@ func (t *Test) NewAggregator(filled bool) *aggregator {
 
 func (t *Test) NewRound() *round {
 	feederID := r.Intn(len(params.TokenFeeders)-1) + 1
-	round := newRound(int64(feederID), params.TokenFeeders[feederID], int64(params.MaxNonce), nil)
+	round := newRound(int64(feederID), params.TokenFeeders[feederID], int64(params.MaxNonce), nil, NewAggMedian())
 	return round
 }
 
