@@ -16,6 +16,7 @@ import (
 const (
 	layout          = "2006-01-02 15:04:05"
 	maxFutureOffset = 30 * time.Second
+	maxPriceLength  = 32
 )
 
 // CreatePrice proposes price for new round of specific tokenFeeder
@@ -73,7 +74,10 @@ func (ms msgServer) CreatePrice(goCtx context.Context, msg *types.MsgCreatePrice
 		roundIDStr := strconv.FormatUint(finalPrice.RoundID, 10)
 		priceStr := finalPrice.Price
 
-		if len(priceStr) >= 32 {
+		// if price is too long, hash it
+		// this is to prevent the price from being too long and causing the event to be too long
+		// price is also used for 'nst' to describe the balance change, and it will be at least 32 bytes at that case
+		if len(priceStr) >= maxPriceLength {
 			hash := sha256.New()
 			hash.Write([]byte(priceStr))
 			priceStr = base64.StdEncoding.EncodeToString(hash.Sum(nil))
