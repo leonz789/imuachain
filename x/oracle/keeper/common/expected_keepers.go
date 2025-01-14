@@ -1,11 +1,14 @@
 package common
 
 import (
+	"time"
+
 	sdkmath "cosmossdk.io/math"
 	dogfoodkeeper "github.com/ExocoreNetwork/exocore/x/dogfood/keeper"
 	dogfoodtypes "github.com/ExocoreNetwork/exocore/x/dogfood/types"
 	"github.com/ExocoreNetwork/exocore/x/oracle/types"
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cometbft/cometbft/libs/log"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
@@ -14,12 +17,36 @@ type Price struct {
 	Value   sdkmath.Int
 	Decimal uint8
 }
-
+type SlashingKeeper interface {
+	JailUntil(sdk.Context, sdk.ConsAddress, time.Time)
+}
 type KeeperOracle interface {
 	KeeperDogfood
+	SlashingKeeper
 
+	Logger(ctx sdk.Context) log.Logger
+	AddZeroNonceItemWithFeederIDForValidators(ctx sdk.Context, feederID uint64, validators []string)
+	InitValidatorReportInfo(ctx sdk.Context, validator string, height int64)
+	ClearAllValidatorReportInfo(ctx sdk.Context)
+	ClearAllValidatorMissedRoundBitArray(ctx sdk.Context)
+	GrowRoundID(ctx sdk.Context, tokenID uint64) (price string, roundID uint64)
+	AppendPriceTR(ctx sdk.Context, tokenID uint64, priceTR types.PriceTimeRound) bool
+	GetValidatorReportInfo(ctx sdk.Context, validator string) (info types.ValidatorReportInfo, found bool)
+	GetMaliciousJailDuration(ctx sdk.Context) (res time.Duration)
+	ClearValidatorMissedRoundBitArray(ctx sdk.Context, validator string)
+	GetReportedRoundsWindow(ctx sdk.Context) int64
+	GetValidatorMissedRoundBitArray(ctx sdk.Context, validator string, index uint64) bool
+	SetValidatorMissedRoundBitArray(ctx sdk.Context, validator string, index uint64, missed bool)
+	GetMinReportedPerWindow(ctx sdk.Context) int64
+	GetMissJailDuration(ctx sdk.Context) (res time.Duration)
+	SetValidatorReportInfo(ctx sdk.Context, validator string, info types.ValidatorReportInfo)
+	GetSlashFractionMalicious(ctx sdk.Context) (res sdk.Dec)
+	SetValidatorUpdateForCache(sdk.Context, types.ValidatorUpdateBlock)
+	SetParamsForCache(sdk.Context, types.RecentParams)
+	SetMsgItemsForCache(sdk.Context, types.RecentMsg)
+	GetRecentParamsWithinMaxNonce(ctx sdk.Context) (recentParamsList []*types.RecentParams, prev, latest types.RecentParams)
+	GetAllRecentMsg(ctx sdk.Context) (list []types.RecentMsg)
 	GetParams(sdk.Context) types.Params
-
 	GetIndexRecentMsg(sdk.Context) (types.IndexRecentMsg, bool)
 	GetAllRecentMsgAsMap(sdk.Context) map[int64][]*types.MsgItem
 

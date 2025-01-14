@@ -60,7 +60,7 @@ func DefaultParams() Params {
 				Name:            "ETH",
 				ChainID:         1,
 				ContractAddress: "0x",
-				Decimal:         18,
+				Decimal:         8,
 				Active:          true,
 				AssetID:         "0x0b34c4d876cd569129cf56bafabb3f9e97a4ff42_0x9ce1",
 			},
@@ -71,7 +71,7 @@ func DefaultParams() Params {
 				Name: "0 position is reserved",
 			},
 			{
-				Name: "Chainlink",
+				Name: SourceChainlinkName,
 				Entry: &Endpoint{
 					Offchain: map[uint64]string{0: ""},
 				},
@@ -95,7 +95,7 @@ func DefaultParams() Params {
 				TokenID:        1,
 				RuleID:         1,
 				StartRoundID:   1,
-				StartBaseBlock: 1000000,
+				StartBaseBlock: 20,
 				Interval:       10,
 			},
 		},
@@ -322,6 +322,8 @@ func (p Params) UpdateTokens(currentHeight uint64, tokens ...*Token) (Params, er
 				if len(t.AssetID) > 0 {
 					token.AssetID = t.AssetID
 				}
+				// tokenID is actually uint since it's index of array
+				// #nosec G115
 				if !p.TokenStarted(uint64(tokenID), currentHeight) {
 					// contractAddres is mainly used as a description information
 					if len(t.ContractAddress) > 0 {
@@ -553,7 +555,8 @@ func (p Params) IsValidSource(sourceID uint64) bool {
 
 func (p Params) GetTokenFeeder(feederID uint64) *TokenFeeder {
 	for k, v := range p.TokenFeeders {
-		if uint64(k) == feederID {
+		// #nosec G115  // index of array is uint
+		if k >= 0 && uint64(k) == feederID {
 			return v
 		}
 	}
@@ -562,6 +565,7 @@ func (p Params) GetTokenFeeder(feederID uint64) *TokenFeeder {
 
 func (p Params) GetTokenInfo(feederID uint64) *Token {
 	for k, v := range p.TokenFeeders {
+		// #nosec G115  // index of arry is uint
 		if uint64(k) == feederID {
 			return p.Tokens[v.TokenID]
 		}
@@ -587,6 +591,7 @@ func (p Params) CheckRules(feederID uint64, prices []*PriceSource) (bool, error)
 				if source.Valid {
 					notFound = true
 					for _, p := range prices {
+						// #nosec G115  // index of array is uint
 						if p.SourceID == uint64(sID) {
 							notFound = false
 							break
@@ -621,4 +626,23 @@ func (p Params) CheckDecimal(feederID uint64, decimal int32) bool {
 	feeder := p.TokenFeeders[feederID]
 	token := p.Tokens[feeder.TokenID]
 	return token.Decimal == decimal
+}
+
+func (p Params) IsForceSealingUpdate(params *Params) bool {
+	if p.MaxNonce != params.MaxNonce ||
+		p.MaxDetId != params.MaxDetId ||
+		p.ThresholdA != params.ThresholdA ||
+		p.ThresholdB != params.ThresholdB ||
+		p.Mode != params.Mode {
+		return true
+	}
+	return false
+}
+
+func (p Params) IsSlashingResetUpdate(params *Params) bool {
+	if p.Slashing.ReportedRoundsWindow != params.Slashing.ReportedRoundsWindow ||
+		p.Slashing.MinReportedPerWindow != params.Slashing.MinReportedPerWindow {
+		return true
+	}
+	return false
 }

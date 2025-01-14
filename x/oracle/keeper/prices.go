@@ -34,10 +34,12 @@ func (k Keeper) GetPrices(
 	val.TokenID = tokenID
 	val.NextRoundID = nextRoundID
 	var i uint64
+	// #nosec G11
 	if nextRoundID <= uint64(common.MaxSizePrices) {
 		i = 1
 		val.PriceList = make([]*types.PriceTimeRound, 0, nextRoundID)
 	} else {
+		// #nosec G11
 		i = nextRoundID - uint64(common.MaxSizePrices)
 		val.PriceList = make([]*types.PriceTimeRound, 0, common.MaxSizePrices)
 	}
@@ -63,17 +65,13 @@ func (k Keeper) GetSpecifiedAssetsPrice(ctx sdk.Context, assetID string) (types.
 		}, nil
 	}
 
-	var p types.Params
 	// get params from cache if exists
-	if k.memStore.agc != nil {
-		p = k.memStore.agc.GetParams()
-	} else {
-		p = k.GetParams(ctx)
-	}
+	p := k.GetParamsFromCache()
 	tokenID := p.GetTokenIDFromAssetID(assetID)
 	if tokenID == 0 {
 		return types.Price{}, types.ErrGetPriceAssetNotFound.Wrapf("assetID does not exist in oracle %s", assetID)
 	}
+	// #nosec G115
 	price, found := k.GetPriceTRLatest(ctx, uint64(tokenID))
 	if !found {
 		return types.Price{
@@ -97,13 +95,8 @@ func (k Keeper) GetSpecifiedAssetsPrice(ctx sdk.Context, assetID string) (types.
 
 // return latest price for assets
 func (k Keeper) GetMultipleAssetsPrices(ctx sdk.Context, assets map[string]interface{}) (prices map[string]types.Price, err error) {
-	var p types.Params
 	// get params from cache if exists
-	if k.memStore.agc != nil {
-		p = k.memStore.agc.GetParams()
-	} else {
-		p = k.GetParams(ctx)
-	}
+	p := k.GetParamsFromCache()
 	// ret := make(map[string]types.Price)
 	prices = make(map[string]types.Price)
 	info := ""
@@ -122,6 +115,7 @@ func (k Keeper) GetMultipleAssetsPrices(ctx sdk.Context, assets map[string]inter
 			prices = nil
 			break
 		}
+		// #nosec G115
 		price, found := k.GetPriceTRLatest(ctx, uint64(tokenID))
 		if !found {
 			info = info + assetID + " "
@@ -209,26 +203,21 @@ func (k Keeper) AppendPriceTR(ctx sdk.Context, tokenID uint64, priceTR types.Pri
 	store := k.getPriceTRStore(ctx, tokenID)
 	b := k.cdc.MustMarshal(&priceTR)
 	store.Set(types.PricesRoundKey(nextRoundID), b)
-	if expiredRoundID := nextRoundID - k.memStore.agc.GetParamsMaxSizePrices(); expiredRoundID > 0 {
+	p := *k.GetParamsFromCache()
+	// #nosec G115  // maxSizePrices is not negative
+	if expiredRoundID := nextRoundID - uint64(p.MaxSizePrices); expiredRoundID > 0 {
 		store.Delete(types.PricesRoundKey(expiredRoundID))
 	}
 	roundID := k.IncreaseNextRoundID(ctx, tokenID)
-
-	// update for native tokens
-	// TODO: set hooks as a genral approach
-	var p types.Params
-	// get params from cache if exists
-	if k.memStore.agc != nil {
-		p = k.memStore.agc.GetParams()
-	} else {
-		p = k.GetParams(ctx)
-	}
-	assetIDs := p.GetAssetIDsFromTokenID(tokenID)
-	for _, assetID := range assetIDs {
-		if nstChain, ok := strings.CutPrefix(assetID, types.NSTIDPrefix); ok {
-			if err := k.UpdateNSTByBalanceChange(ctx, fmt.Sprintf("%s%s", NSTETHAssetAddr, nstChain), []byte(priceTR.Price), roundID); err != nil {
-				// we just report this error in log to notify validators
-				k.Logger(ctx).Error(types.ErrUpdateNativeTokenVirtualPriceFail.Error(), "error", err)
+	// we dont' update empty value for nst records
+	if len(priceTR.Price) > 0 {
+		assetIDs := p.GetAssetIDsFromTokenID(tokenID)
+		for _, assetID := range assetIDs {
+			if nstChain, ok := strings.CutPrefix(strings.ToLower(assetID), types.NSTIDPrefix); ok {
+				if err := k.UpdateNSTByBalanceChange(ctx, fmt.Sprintf("%s%s", NSTETHAssetAddr, nstChain), []byte(priceTR.Price), roundID); err != nil {
+					// we just report this error in log to notify validators
+					k.Logger(ctx).Error(types.ErrUpdateNativeTokenVirtualPriceFail.Error(), "error", err)
+				}
 			}
 		}
 	}
@@ -237,6 +226,7 @@ func (k Keeper) AppendPriceTR(ctx sdk.Context, tokenID uint64, priceTR types.Pri
 }
 
 // GrowRoundID Increases roundID with the previous price
+// func (k Keeper) GrowRoundID(ctx sdk.Context, tokenID uint64) (price *types.PriceTimeRound, roundID uint64) {
 func (k Keeper) GrowRoundID(ctx sdk.Context, tokenID uint64) (price string, roundID uint64) {
 	if pTR, ok := k.GetPriceTRLatest(ctx, tokenID); ok {
 		pTR.RoundID++
@@ -248,8 +238,8 @@ func (k Keeper) GrowRoundID(ctx sdk.Context, tokenID uint64) (price string, roun
 		k.AppendPriceTR(ctx, tokenID, types.PriceTimeRound{
 			RoundID: nextRoundID,
 		})
-		price = ""
 		roundID = nextRoundID
+		price = ""
 	}
 	return
 }
