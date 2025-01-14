@@ -8,7 +8,7 @@ require (
 	cosmossdk.io/simapp v0.0.0-20230608160436-666c345ad23d
 	cosmossdk.io/tools/rosetta v0.2.1
 	github.com/BurntSushi/toml v1.3.2
-	github.com/ExocoreNetwork/price-feeder v0.1.15
+	github.com/ExocoreNetwork/price-feeder v0.0.0-20250110103354-b3670dac7431
 	github.com/agiledragon/gomonkey/v2 v2.11.0
 	github.com/armon/go-metrics v0.4.1
 	github.com/cometbft/cometbft v0.37.4
@@ -58,7 +58,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/ledgerwatch/erigon-lib v0.0.0-20230210071639-db0e7ed11263 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
-	go.uber.org/atomic v1.10.0 // indirect
+	go.uber.org/zap v1.27.0 // indirect
 )
 
 require (
