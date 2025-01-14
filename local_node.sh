@@ -204,21 +204,23 @@ EOF
 	# generate oracle_feeder.yaml file
 	oracle_feeder_content=$(
 		cat <<EOF
-sources:
-  - chainlink
 tokens:
-  - ETHUSDT
-  - WSTETHUSDT
+  - token: ETHUSDT
+    sources: chainlink
+  - token: WSTETH
+    sources: chainlink
+  - token: nsteth
+    sources: beaconchain
 sender:
-  mnemonic: ""
-  path: $HOMEDIR/config
+  path: /Users/linqing/.tmp-exocored/config
 exocore:
-  chainid: $CHAINID
+  chainid: exocoretestnet_233-3
   appName: exocore
-  rpc: 127.0.0.1:9090
-  ws:
-    addr: !!str ws://127.0.0.1:26657
-    endpoint: /websocket
+  grpc: 127.0.0.1:9090
+  ws: !!str ws://127.0.0.1:26657/websocket
+  rpc: !!str http://127.0.0.1:26657
+debugger:
+  grpc: !!str :50051
 EOF
 	)
 
@@ -230,6 +232,8 @@ EOF
 		cat <<EOF
 url:
   !!str https://ethereum-holesky-rpc.publicnode.com
+nstid:
+  !!str 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee_0x65
 EOF
 	)
 

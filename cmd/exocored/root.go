@@ -161,7 +161,8 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 					}
 				}()
 				mnemonic, _ := cmd.Flags().GetString(flagMnemonic)
-				pricefeeder.StartPriceFeeder(path.Join(clientCtx.HomeDir, confPath, confOracle), mnemonic, path.Join(clientCtx.HomeDir, confPath))
+				serverCtx := sdkserver.GetServerContextFromCmd(cmd)
+				pricefeeder.StartPriceFeeder(path.Join(clientCtx.HomeDir, confPath, confOracle), mnemonic, path.Join(clientCtx.HomeDir, confPath), serverCtx.Logger.With("module", "price-feeder"))
 			}()
 		}
 		return preRunE(cmd, args)
