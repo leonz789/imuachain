@@ -78,7 +78,8 @@ func (ks *KeeperSuite) TestNSTLifeCycleOneStaker() {
 		{0, -10},
 	}
 	rawData := convertBalanceChangeToBytes(stakerChanges)
-	ks.App.OracleKeeper.UpdateNSTByBalanceChange(ks.Ctx, assetID, rawData, 9)
+	// ks.App.OracleKeeper.UpdateNSTByBalanceChange(ks.Ctx, assetID, rawData, 9)
+	ks.App.OracleKeeper.UpdateNSTByBalanceChange(ks.Ctx, assetID, types.PriceTimeRound{Price: string(rawData), RoundID: 9}, 1)
 	// - 2.1 check stakerInfo
 	stakerInfo = ks.App.OracleKeeper.GetStakerInfo(ks.Ctx, assetID, stakerStr)
 	ks.Equal(types.BalanceInfo{
@@ -135,7 +136,7 @@ func (ks *KeeperSuite) TestNSTLifeCycleOneStaker() {
 		{0, -5},
 	}
 	rawData = convertBalanceChangeToBytes(stakerChanges)
-	ks.App.OracleKeeper.UpdateNSTByBalanceChange(ks.Ctx, assetID, rawData, 11)
+	ks.App.OracleKeeper.UpdateNSTByBalanceChange(ks.Ctx, assetID, types.PriceTimeRound{Price: string(rawData), RoundID: 11}, 2)
 	// - 4.1 check stakerInfo
 	stakerInfo = ks.App.OracleKeeper.GetStakerInfo(ks.Ctx, assetID, stakerStr)
 	ks.Equal(types.BalanceInfo{

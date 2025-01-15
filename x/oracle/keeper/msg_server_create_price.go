@@ -49,14 +49,14 @@ func (ms msgServer) CreatePrice(goCtx context.Context, msg *types.MsgCreatePrice
 		if sdkerrors.IsOf(err, types.ErrQuoteRecorded) {
 			// quote is recorded only, this happens when a quoting-window is not availalbe before that window end due to final price aggregated successfully in advance
 			// we will still record this msg if it's valid
-			logger.Info("recorded quote for oracle-behavior evaluation", logQuote...)
+			logger.Info("recorded quote for oracle-behavior evaluation", append(logQuote, "msg", msg)...)
 			return &types.MsgCreatePriceResponse{}, nil
 		}
 		logger.Error("failed to process quote", append(logQuote, "error", err)...)
 		return nil, err
 	}
 
-	logger.Info("added quote for aggregation", logQuote...)
+	logger.Info("added quote for aggregation", append(logQuote, "msg", msg)...)
 	// TODO: use another type
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeCreatePrice,

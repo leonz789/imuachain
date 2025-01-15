@@ -44,19 +44,45 @@ type AggFinalPrice struct {
 	Price    string
 }
 
+type NSTType string
+
 const (
+	NSTIDPrefix         = "nst_"
+	ETHChain    NSTType = "eth"
+	SOLANAChain NSTType = "solana"
+
+	ETHMainnetChainID  = "0x7595"
+	ETHLocalnetChainID = "0x65"
+	ETHHoleskyChainID  = "0x9d19"
+	ETHSepoliaChainID  = "0x9ce1"
+	NSTETHAssetAddr    = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
 	DefaultPriceValue   = 1
 	DefaultPriceDecimal = 0
 
 	MaxPageLimit = 100
-	NSTIDPrefix  = "nst"
 
 	SourceChainlinkName = "Chainlink"
 	SourceChainlinkID   = 1
 	TimeLayout          = "2006-01-02 15:04:05"
 )
 
-var DelimiterForCombinedKey = byte('/')
+var (
+	DelimiterForCombinedKey = byte('/')
+
+	NSTChains = map[NSTType][]string{
+		ETHChain: {ETHMainnetChainID, ETHLocalnetChainID, ETHHoleskyChainID, ETHSepoliaChainID},
+	}
+	NSTChainsInverted = map[string]NSTType{
+		ETHMainnetChainID:  ETHChain,
+		ETHLocalnetChainID: ETHChain,
+		ETHHoleskyChainID:  ETHChain,
+		ETHSepoliaChainID:  ETHChain,
+	}
+	NSTAssetAddr = map[NSTType]string{
+		ETHChain: NSTETHAssetAddr,
+	}
+)
 
 func Uint64Bytes(value uint64) []byte {
 	valueBytes := make([]byte, 8)

@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -503,6 +504,18 @@ func (p Params) GetTokenIDFromAssetID(assetID string) int {
 		}
 	}
 	return 0
+}
+
+func (p Params) GetAssetIDForNSTFromTokenID(tokenID uint64) string {
+	assetIDs := p.GetAssetIDsFromTokenID(tokenID)
+	for _, assetID := range assetIDs {
+		if nstChain, ok := strings.CutPrefix(strings.ToLower(assetID), NSTIDPrefix); ok {
+			if NSTChain, ok := NSTChainsInverted[nstChain]; ok {
+				return fmt.Sprintf("%s_%s", NSTAssetAddr[NSTChain], nstChain)
+			}
+		}
+	}
+	return ""
 }
 
 func (p Params) GetAssetIDsFromTokenID(tokenID uint64) []string {

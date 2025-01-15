@@ -224,7 +224,7 @@ func (s *E2ETestSuite) testCreatePriceNST() {
 
 	// slashing_{miss_v3:1, window:1} [1]
 	s.moveToAndCheck(7)
-	_, ps := priceNST1.generateRealTimeStructs("100", 1)
+	_, ps := priceNST1.generateRealTimeStructs("100_1", 1)
 	msg0 := oracletypes.NewMsgCreatePrice(creator0.String(), 2, []*oracletypes.PriceSource{&ps}, 7, 1)
 	msg1 := oracletypes.NewMsgCreatePrice(creator1.String(), 2, []*oracletypes.PriceSource{&ps}, 7, 1)
 	msg2 := oracletypes.NewMsgCreatePrice(creator2.String(), 2, []*oracletypes.PriceSource{&ps}, 7, 1)

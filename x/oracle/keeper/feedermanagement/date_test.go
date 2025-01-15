@@ -154,6 +154,24 @@ var (
 		},
 		Validator: "validator3",
 	}
+	protoMsgItem4_2 = &oracletypes.MsgItem{
+		FeederID: 1,
+		PSources: []*oracletypes.PriceSource{
+			{
+				SourceID: 1,
+				Prices: []*oracletypes.PriceTimeDetID{
+					{
+						Price:     "777",
+						Decimal:   8,
+						DetID:     "2",
+						Timestamp: timestamp,
+					},
+				},
+			},
+		},
+		Validator: "validator3",
+	}
+
 	protoMsgItem5 = &oracletypes.MsgItem{
 		FeederID: 1,
 		PSources: []*oracletypes.PriceSource{

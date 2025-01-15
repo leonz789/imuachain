@@ -2,8 +2,6 @@ package keeper
 
 import (
 	"encoding/binary"
-	"fmt"
-	"strings"
 
 	sdkmath "cosmossdk.io/math"
 	assetstypes "github.com/ExocoreNetwork/exocore/x/assets/types"
@@ -194,34 +192,42 @@ func (k Keeper) GetAllPrices(ctx sdk.Context) (list []types.Prices) {
 }
 
 // AppenPriceTR append a new round of price for specific token, return false if the roundID not match
-func (k Keeper) AppendPriceTR(ctx sdk.Context, tokenID uint64, priceTR types.PriceTimeRound) bool {
+func (k Keeper) AppendPriceTR(ctx sdk.Context, tokenID uint64, priceTR types.PriceTimeRound, detID string) bool {
 	nextRoundID := k.GetNextRoundID(ctx, tokenID)
+	logger := k.Logger(ctx)
 	// This should not happen
 	if nextRoundID != priceTR.RoundID {
+		logger.Error("roundID not match", "nextRoundID", nextRoundID, "priceTR.RoundID", priceTR.RoundID)
 		return false
 	}
 	store := k.getPriceTRStore(ctx, tokenID)
 	b := k.cdc.MustMarshal(&priceTR)
 	store.Set(types.PricesRoundKey(nextRoundID), b)
+
 	p := *k.GetParamsFromCache()
 	// #nosec G115  // maxSizePrices is not negative
 	if expiredRoundID := nextRoundID - uint64(p.MaxSizePrices); expiredRoundID > 0 {
 		store.Delete(types.PricesRoundKey(expiredRoundID))
 	}
-	roundID := k.IncreaseNextRoundID(ctx, tokenID)
-	// we dont' update empty value for nst records
-	if len(priceTR.Price) > 0 {
-		assetIDs := p.GetAssetIDsFromTokenID(tokenID)
-		for _, assetID := range assetIDs {
-			if nstChain, ok := strings.CutPrefix(strings.ToLower(assetID), types.NSTIDPrefix); ok {
-				if err := k.UpdateNSTByBalanceChange(ctx, fmt.Sprintf("%s%s", NSTETHAssetAddr, nstChain), []byte(priceTR.Price), roundID); err != nil {
-					// we just report this error in log to notify validators
-					k.Logger(ctx).Error(types.ErrUpdateNativeTokenVirtualPriceFail.Error(), "error", err)
-				}
-			}
+	k.IncreaseNextRoundID(ctx, tokenID)
+
+	if len(priceTR.Price) == 0 {
+		return true
+	}
+	if nstAssetID := p.GetAssetIDForNSTFromTokenID(tokenID); len(nstAssetID) > 0 {
+		nstVersion, err := getNSTVersionFromDetID(detID)
+		if err != nil || nstVersion == 0 {
+			logger.Error(types.ErrUpdateNativeTokenVirtualPriceFail.Error(), "error", err, "nstVersion", nstVersion, "tokenID", tokenID, "roundID", nextRoundID)
+			return true
+		}
+		err = k.UpdateNSTByBalanceChange(ctx, nstAssetID, priceTR, nstVersion)
+		if err != nil {
+			// we just report this error in log to notify validators
+			logger.Error(types.ErrUpdateNativeTokenVirtualPriceFail.Error(), "error", err)
+		} else {
+			logger.Info("updated balance change for NST")
 		}
 	}
-
 	return true
 }
 
@@ -230,14 +236,14 @@ func (k Keeper) AppendPriceTR(ctx sdk.Context, tokenID uint64, priceTR types.Pri
 func (k Keeper) GrowRoundID(ctx sdk.Context, tokenID uint64) (price string, roundID uint64) {
 	if pTR, ok := k.GetPriceTRLatest(ctx, tokenID); ok {
 		pTR.RoundID++
-		k.AppendPriceTR(ctx, tokenID, pTR)
+		k.AppendPriceTR(ctx, tokenID, pTR, "")
 		price = pTR.Price
 		roundID = pTR.RoundID
 	} else {
 		nextRoundID := k.GetNextRoundID(ctx, tokenID)
 		k.AppendPriceTR(ctx, tokenID, types.PriceTimeRound{
 			RoundID: nextRoundID,
-		})
+		}, "")
 		roundID = nextRoundID
 		price = ""
 	}
