@@ -283,25 +283,48 @@ func TestAggregation(t *testing.T) {
 							So(finalPrice, ShouldBeNil)
 							So(addedMsgItem, ShouldResemble, pmsg3)
 							So(err, ShouldBeNil)
-							Convey("add msg-v3-detID2, finalPrice", func() {
-								// v3,detID=2
-								pmsg4 := protoMsgItem4
-								pmsg4.FeederID = uint64(feederID)
-								finalPrice, addedMsgItem, err = r.Tally(pmsg4)
-								So(finalPrice, ShouldResemble, &PriceResult{
-									Price:   "999",
-									Decimal: 8,
-									DetID:   "2",
+							Convey("two cases:", func() {
+								Convey("add msg-v3-detID2, finalPrice", func() {
+									// v3,detID=2
+									pmsg4 := protoMsgItem4
+									pmsg4.FeederID = uint64(feederID)
+									finalPrice, addedMsgItem, err = r.Tally(pmsg4)
+									So(finalPrice, ShouldResemble, &PriceResult{
+										Price:   "999",
+										Decimal: 8,
+										DetID:   "2",
+									})
+									So(addedMsgItem, ShouldResemble, pmsg4)
+									So(err, ShouldBeNil)
+									Convey("add msg-v4-detID2, recordOnly", func() {
+										pmsg5 := protoMsgItem5
+										pmsg5.FeederID = uint64(feederID)
+										finalPrice, addedMsgItem, err = r.Tally(pmsg5)
+										So(finalPrice, ShouldBeNil)
+										So(addedMsgItem, ShouldResemble, pmsg5)
+										So(err, ShouldBeError, oracletypes.ErrQuoteRecorded)
+									})
 								})
-								So(addedMsgItem, ShouldResemble, pmsg4)
-								So(err, ShouldBeNil)
-								Convey("add msg-v4-detID1, recordOnly", func() {
-									pmsg5 := protoMsgItem5
-									pmsg5.FeederID = uint64(feederID)
-									finalPrice, addedMsgItem, err = r.Tally(pmsg5)
+								Convey("add msg-v3-detID2-different-price, success", func() {
+									pmsg4 := protoMsgItem4_2
+									pmsg4.FeederID = uint64(feederID)
+									finalPrice, addedMsgItem, err = r.Tally(pmsg4)
 									So(finalPrice, ShouldBeNil)
-									So(addedMsgItem, ShouldResemble, pmsg5)
-									So(err, ShouldBeError, oracletypes.ErrQuoteRecorded)
+									So(addedMsgItem, ShouldResemble, pmsg4)
+									So(err, ShouldBeNil)
+									Convey("add msg-v4-detID2, success", func() {
+										pmsg5 := protoMsgItem5
+										pmsg5.FeederID = uint64(feederID)
+										finalPrice, addedMsgItem, err = r.Tally(pmsg5)
+										So(finalPrice, ShouldResemble, &PriceResult{
+											Price:   "999",
+											Decimal: 8,
+											DetID:   "2",
+										})
+										So(addedMsgItem, ShouldResemble, pmsg5)
+										So(err, ShouldBeNil)
+									})
+
 								})
 							})
 						})
