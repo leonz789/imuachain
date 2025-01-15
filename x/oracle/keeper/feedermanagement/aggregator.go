@@ -457,30 +457,37 @@ func (rds *recordsDS) GetFinalPrice(t *threshold) (*PriceResult, bool) {
 // NOTE: the input PricePower should be filtered by recordsValidators before calling this function to make sure the price is not duplicated by detID
 func (rds *recordsDS) AddPrice(p *PricePower) {
 	validator := maps.Keys(p.Validators)[0]
-	biggestDetID := true
-	p = p.Cpy()
-	for i, record := range rds.records {
+	i := 0
+	l := len(rds.records)
+	fmt.Println("debug--->before.AddPrice", rds.records)
+	for ; i < l; i++ {
+		record := rds.records[i]
 		if record.Price.EqualDS(p.Price) {
 			if _, ok := record.Validators[validator]; !ok {
 				record.Power.Add(record.Power, p.Power)
 				record.Validators[validator] = struct{}{}
 			}
-			biggestDetID = false
 			break
 		}
-		if p.Price.DetID <= record.Price.DetID {
-			// insert before i
-			combined := append([]*PricePower{p}, rds.records[i:]...)
-			rds.records = append(rds.records[:i], combined...)
-			biggestDetID = false
-			break
+	}
+	if i >= l {
+		for i = 0; i < l; i++ {
+			record := rds.records[i]
+			if p.Price.DetID <= record.Price.DetID {
+				// insert before i
+				combined := append([]*PricePower{p}, rds.records[i:]...)
+				rds.records = append(rds.records[:i], combined...)
+				break
+			}
+		}
+		if i >= l {
+			p = p.Cpy()
+			rds.records = append(rds.records, p)
 		}
 	}
 	if _, ok := rds.validators[validator]; !ok {
 		rds.accumulatedPowers.Add(rds.accumulatedPowers, p.Power)
 		rds.validators[validator] = struct{}{}
 	}
-	if biggestDetID {
-		rds.records = append(rds.records, p)
-	}
+	fmt.Println("debug--->before.AddPrice", rds.records)
 }

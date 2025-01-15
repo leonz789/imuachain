@@ -259,7 +259,8 @@ func (f *FeederManager) commitRounds(ctx sdk.Context) {
 					logger.Info("commit round with aggregated price", "feederID", r.feederID, "roundID", r.roundID, "baseBlock", r.roundBaseBlock, "price", priceCommit, "heigth", height)
 
 					// #nosec G115  // tokenID is index of slice
-					f.k.AppendPriceTR(ctx, uint64(r.tokenID), *priceCommit)
+					f.k.AppendPriceTR(ctx, uint64(r.tokenID), *priceCommit, finalPrice.DetID)
+					// f.k.AppendPriceTR(ctx, uint64(r.tokenID), *priceCommit)
 
 					fstr := strconv.FormatInt(feederID, 10)
 					successFeederIDs = append(successFeederIDs, fstr) // there's no valid price for any round yet
