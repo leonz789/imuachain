@@ -112,7 +112,6 @@ func DefaultParams() Params {
 			MinReportedPerWindow:        sdkmath.LegacyNewDec(1).Quo(sdkmath.LegacyNewDec(2)),
 			OracleMissJailDuration:      600 * time.Second,
 			OracleMaliciousJailDuration: 30 * 24 * time.Hour,
-			SlashFractionMiss:           sdkmath.LegacyNewDec(1).Quo(sdkmath.LegacyNewDec(20)),
 			SlashFractionMalicious:      sdkmath.LegacyNewDec(1).Quo(sdkmath.LegacyNewDec(10)),
 		},
 	}
@@ -152,9 +151,6 @@ func (p Params) Validate() error {
 	}
 	if slashing.MinReportedPerWindow.GT(oneDec) || !slashing.MinReportedPerWindow.IsPositive() {
 		return ErrInvalidParams.Wrapf("MinReportedPerWindow must be in (0, 1], got %v", slashing.MinReportedPerWindow)
-	}
-	if slashing.SlashFractionMiss.GT(oneDec) || !slashing.SlashFractionMiss.IsPositive() {
-		return ErrInvalidParams.Wrapf("SlashFractionMiss must be in (0, 1], got %v", slashing.SlashFractionMiss)
 	}
 	if slashing.SlashFractionMalicious.GT(oneDec) || !slashing.SlashFractionMalicious.IsPositive() {
 		return ErrInvalidParams.Wrapf("SlashFractionMalicious must be in (0, 1], got %v", slashing.SlashFractionMalicious)
