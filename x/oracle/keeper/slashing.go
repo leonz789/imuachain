@@ -80,11 +80,6 @@ func (k Keeper) GetReportedRoundsWindow(ctx sdk.Context) int64 {
 	return k.GetParams(ctx).Slashing.ReportedRoundsWindow
 }
 
-// GetSlashFractionMiss fraction of power slashed for missed rounds
-func (k Keeper) GetSlashFractionMiss(ctx sdk.Context) (res sdk.Dec) {
-	return k.GetParams(ctx).Slashing.SlashFractionMiss
-}
-
 // GetSlashFractionMalicious fraction returns the fraction of power slashed for malicious behavior
 func (k Keeper) GetSlashFractionMalicious(ctx sdk.Context) (res sdk.Dec) {
 	return k.GetParams(ctx).Slashing.SlashFractionMalicious
