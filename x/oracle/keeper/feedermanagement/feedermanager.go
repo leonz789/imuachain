@@ -657,7 +657,7 @@ func (f *FeederManager) ProcessQuote(ctx sdk.Context, msg *oracletypes.MsgCreate
 	r, ok := f.rounds[int64(msgItem.FeederID)]
 	if !ok {
 		// This should not happened since we do check the nonce in anthHandle
-		return nil, fmt.Errorf("round not exists for feederID:%d, porposer:%s", msgItem.FeederID, msgItem.Validator)
+		return nil, fmt.Errorf("round not exists for feederID:%d, proposer:%s", msgItem.FeederID, msgItem.Validator)
 	}
 
 	// #nosec G115  // baseBlock is block height which is not negative

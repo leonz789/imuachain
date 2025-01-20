@@ -300,6 +300,9 @@ func (ps *priceSource) Add(psNew *priceSource) (*priceSource, error) {
 	}
 
 	if !ps.deterministic {
+		if len(psNew.prices) == 0 {
+			return nil, errors.New("failed to add ProtoPriceSource for NS, psNew.prices is empty")
+		}
 		// this is not ds, then just set the final price or overwrite if the input has a later timestamp
 		if ps.finalPrice == nil {
 			ps.finalPrice = psNew.prices[0].PriceResult()
