@@ -29,9 +29,6 @@ RUN apk add --no-cache \
 	jq~=1.7 \
 	curl~=8.11 \
 	bash~=5.2 \
-	vim~=9.0 \
-	lz4~=1.9 \
-	rclone~=1.65 \
     && addgroup -g 1000 exocore \
     && adduser -S -h /home/exocore -D exocore -u 1000 -G exocore
 
