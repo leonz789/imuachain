@@ -169,7 +169,8 @@ type StakerInfosAssets struct {
 	AssetId string `protobuf:"bytes,1,opt,name=asset_id,json=assetId,proto3" json:"asset_id,omitempty"`
 	// stakerInfos
 	StakerInfos []*StakerInfo `protobuf:"bytes,2,rep,name=staker_infos,json=stakerInfos,proto3" json:"staker_infos,omitempty"`
-	NstVersion  int64         `protobuf:"varint,3,opt,name=nst_version,json=nstVersion,proto3" json:"nst_version,omitempty"`
+	// nst_version is the version of nst to track validator list changes
+	NstVersion int64 `protobuf:"varint,3,opt,name=nst_version,json=nstVersion,proto3" json:"nst_version,omitempty"`
 }
 
 func (m *StakerInfosAssets) Reset()         { *m = StakerInfosAssets{} }
@@ -232,7 +233,8 @@ type StakerListAssets struct {
 	AssetId string `protobuf:"bytes,1,opt,name=asset_id,json=assetId,proto3" json:"asset_id,omitempty"`
 	// stakerList
 	StakerList *StakerList `protobuf:"bytes,2,opt,name=staker_list,json=stakerList,proto3" json:"staker_list,omitempty"`
-	NstVersion int64       `protobuf:"varint,3,opt,name=nst_version,json=nstVersion,proto3" json:"nst_version,omitempty"`
+	// nst_version is the version of nst to track validator list changes
+	NstVersion int64 `protobuf:"varint,3,opt,name=nst_version,json=nstVersion,proto3" json:"nst_version,omitempty"`
 }
 
 func (m *StakerListAssets) Reset()         { *m = StakerListAssets{} }
