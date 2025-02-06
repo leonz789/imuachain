@@ -39,10 +39,6 @@ func (ms msgServer) CreatePrice(goCtx context.Context, msg *types.MsgCreatePrice
 		return nil, types.ErrPriceProposalFormatInvalid.Wrap(err.Error())
 	}
 
-	if err := ms.ValidateMsg(msg); err != nil {
-		logger.Error("failed to validate msg", append(logQuote, "error", err)...)
-		return nil, err
-	}
 	// core logic and functionality of Price Aggregation
 	finalPrice, err := ms.ProcessQuote(ctx, msg, ctx.IsCheckTx())
 	if err != nil {

@@ -130,7 +130,7 @@ type recordsDS struct {
 
 // each source will get a final price independently, the order of sources does not matter, map is safe
 // recordsDSs is the price records for all deterministic sources
-// threshold indicates the threshold definition to detemin final price for each source
+// threshold indicates the threshold defined to decide final price for each source
 type recordsDSs struct {
 	t     *threshold
 	dsMap map[int64]*recordsDS
@@ -216,7 +216,7 @@ type round struct {
 	status roundStatus
 	// aggregator is the price aggregator for current round
 	a *aggregator
-	// cache is the cache reader for current round to provid params, validators information
+	// cache is the cache reader for current round to provide params, validators information
 	cache CacheReader
 	// algo is the aggregation algorithm for current round to get final price
 	algo AggAlgorithm

@@ -86,7 +86,7 @@ func (f *FeederManager) EndBlock(ctx sdk.Context) {
 	// update params and validator set if necessary in caches and commit all updated information
 	addedValidators := f.updateAndCommitCaches(ctx)
 
-	// update Slashing related records (reportInfo, missCountBitArray), handle case for 1. reseetSlashing, 2. new validators added for validatorset change
+	// update Slashing related records (reportInfo, missCountBitArray), handle case for 1. resetSlashing, 2. new validators added for validatorset change
 	f.updateBehaviorRecordsForNextBlock(ctx, addedValidators)
 
 	// update rounds including create new rounds based on params change, remove expired rounds
@@ -96,7 +96,7 @@ func (f *FeederManager) EndBlock(ctx sdk.Context) {
 
 	// set status to open for rounds before their quoting window
 	feederIDs := f.prepareRounds(ctx)
-	// remove nocnes for closing quoting-window and set nonces for opening quoting-window
+	// remove nonces for closing quoting-window and set nonces for opening quoting-window
 	f.setupNonces(ctx, feederIDs)
 
 	f.ResetFlags()
@@ -243,7 +243,7 @@ func (f *FeederManager) commitRoundsInRecovery() {
 			r.FinalPrice()
 			r.status = roundStatusClosed
 		}
-		// close all quotingWindow to skip current rounds' 'handlQuotingMisBehavior'
+		// close all quotingWindow to skip current rounds' 'handleQuotingMisBehavior'
 		if f.forceSeal {
 			r.closeQuotingWindow()
 		}

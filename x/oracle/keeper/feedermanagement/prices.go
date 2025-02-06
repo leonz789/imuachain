@@ -303,15 +303,10 @@ func (ps *priceSource) Add(psNew *priceSource) (*priceSource, error) {
 		if len(psNew.prices) == 0 {
 			return nil, errors.New("failed to add ProtoPriceSource for NS, psNew.prices is empty")
 		}
+
 		// this is not ds, then just set the final price or overwrite if the input has a later timestamp
-		if ps.finalPrice == nil {
-			ps.finalPrice = psNew.prices[0].PriceResult()
-			ps.prices = append(ps.prices, psNew.prices[0])
-			psNew.prices = psNew.prices[:1]
-			return psNew, nil
-		}
-		// equivalent to After, just overwrite the old value
-		if psNew.prices[0].Timestamp > ps.finalPrice.Timestamp {
+		if ps.finalPrice == nil ||
+			ps.finalPrice.Timestamp < psNew.prices[0].Timestamp {
 			ps.finalPrice = psNew.prices[0].PriceResult()
 			ps.prices = append(ps.prices, psNew.prices[0])
 			psNew.prices = psNew.prices[:1]

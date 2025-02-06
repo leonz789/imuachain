@@ -335,7 +335,7 @@ func (c *caches) GetTokenFeederForFeederID(feederID int64) (tokenFeeder *oraclet
 	return
 }
 
-// SkipCommit skip real commit by setting the updage flag to false
+// SkipCommit skip real commit by setting the update flag to false
 func (c *caches) SkipCommit() {
 	c.validators.update = false
 	c.params.update = false
