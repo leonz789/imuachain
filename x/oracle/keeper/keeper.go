@@ -27,8 +27,6 @@ type (
 		delegationKeeper types.DelegationKeeper
 		assetsKeeper     types.AssetsKeeper
 		types.SlashingKeeper
-		// wrap all four memory cache into one pointer to track them among cpoies of Keeper (msgServer, module)
-		// TODO: remove this
 		*feedermanagement.FeederManager
 	}
 )

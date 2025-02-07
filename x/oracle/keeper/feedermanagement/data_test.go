@@ -90,7 +90,7 @@ var (
 	protoMsgItem2   = newTestProtoMsgItem(1, "validator1", "999", "2")
 	protoMsgItem3   = newTestProtoMsgItem(1, "validator2", "999", "2")
 	protoMsgItem4   = newTestProtoMsgItem(1, "validator3", "999", "2")
-	protoMsgItem4_2 = newTestProtoMsgItem(1, "validatorr3", "777", "2")
+	protoMsgItem4_2 = newTestProtoMsgItem(1, "validator3", "777", "2")
 	protoMsgItem5   = newTestProtoMsgItem(1, "validator4", "999", "2")
 
 	pr1 = &PriceResult{
