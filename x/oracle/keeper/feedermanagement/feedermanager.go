@@ -119,15 +119,25 @@ func (f *FeederManager) setupNonces(ctx sdk.Context, feederIDs []int64) {
 	height := ctx.BlockHeight()
 	// the order does not matter, it's safe to update independent state in non-deterministic order
 	// no need to go through all 'hash' process to range sorted key slice
+	feederIDsUint64 := make([]uint64, 0, len(f.rounds))
 	for _, r := range f.rounds {
 		// remove nonces for closed quoting windows or when forceSeal is marked
 		if r.IsQuotingWindowEnd(height) || f.forceSeal {
 			logger.Debug("clear nonces for closing quoting window or forceSeal", "feederID", r.feederID, "roundID", r.roundID, "basedBlock", r.roundBaseBlock, "height", height, "forceSeal", f.forceSeal)
-			// #nosec G115  // feederID is index of slice
 			// items will be removed from slice and keep the order, so it's safe to delete items in different order
-			f.k.RemoveNonceWithFeederIDForAll(ctx, uint64(r.feederID))
+			// #nosec G115  // feederID is index of slice
+			feederIDsUint64 = append(feederIDsUint64, uint64(r.feederID))
 		}
 	}
+
+	if len(feederIDsUint64) > 0 {
+		if f.forceSeal {
+			f.k.RemoveNonceWithFeederIDsForAll(ctx, feederIDsUint64)
+		} else {
+			f.k.RemoveNonceWithFeederIDsForValidators(ctx, feederIDsUint64, f.cs.GetValidators())
+		}
+	}
+
 	if len(feederIDs) == 0 {
 		return
 	}
@@ -135,12 +145,14 @@ func (f *FeederManager) setupNonces(ctx sdk.Context, feederIDs []int64) {
 	// items need to be insert into slice in order, so feederIDs is sorted
 	sort.Slice(feederIDs, func(i, j int) bool { return feederIDs[i] < feederIDs[j] })
 	validators := f.cs.GetValidators()
+	feederIDsUint64 = make([]uint64, 0, len(feederIDs))
 	for _, feederID := range feederIDs {
 		r := f.rounds[feederID]
 		logger.Debug("init nonces for new quoting window", "feederID", feederID, "roundID", r.roundID, "basedBlock", r.roundBaseBlock, "height", height)
 		// #nosec G115 -- feederID is index of slice
-		f.k.AddZeroNonceItemWithFeederIDForValidators(ctx, uint64(feederID), validators)
+		feederIDsUint64 = append(feederIDsUint64, uint64(feederID))
 	}
+	f.k.AddZeroNonceItemWithFeederIDsForValidators(ctx, feederIDsUint64, validators)
 }
 
 func (f *FeederManager) initBehaviorRecords(ctx sdk.Context, height int64) {
@@ -533,14 +545,18 @@ func (f *FeederManager) removeExpiredRounds(ctx sdk.Context) {
 		}
 	}
 	// the order does not matter when remove item from slice as RemoveNonceWithFeederIDForAll does
+	expiredFeederIDsToRemoveUint64 := make([]uint64, 0)
 	for _, feederID := range expiredFeederIDs {
 		if r := f.rounds[feederID]; r.status != roundStatusClosed {
 			r.closeQuotingWindow()
 			// #nosec G115
-			f.k.RemoveNonceWithFeederIDForAll(ctx, uint64(r.feederID))
+			expiredFeederIDsToRemoveUint64 = append(expiredFeederIDsToRemoveUint64, uint64(feederID))
 		}
 		delete(f.rounds, feederID)
 		f.sortedFeederIDs.remove(feederID)
+	}
+	if len(expiredFeederIDsToRemoveUint64) > 0 {
+		f.k.RemoveNonceWithFeederIDsForValidators(ctx, expiredFeederIDsToRemoveUint64, f.cs.GetValidators())
 	}
 }
 

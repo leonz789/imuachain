@@ -25,13 +25,12 @@ type KeeperOracle interface {
 	SlashingKeeper
 
 	Logger(ctx sdk.Context) log.Logger
-	AddZeroNonceItemWithFeederIDForValidators(ctx sdk.Context, feederID uint64, validators []string)
+	AddZeroNonceItemWithFeederIDsForValidators(ctx sdk.Context, feederIDs []uint64, validators []string)
 	InitValidatorReportInfo(ctx sdk.Context, validator string, height int64)
 	ClearAllValidatorReportInfo(ctx sdk.Context)
 	ClearAllValidatorMissedRoundBitArray(ctx sdk.Context)
 	GrowRoundID(ctx sdk.Context, tokenID uint64) (price string, roundID uint64)
 	AppendPriceTR(ctx sdk.Context, tokenID uint64, priceTR types.PriceTimeRound, detID string) bool
-	// AppendPriceTR(ctx sdk.Context, tokenID uint64, priceTR types.PriceTimeRound) bool
 	GetValidatorReportInfo(ctx sdk.Context, validator string) (info types.ValidatorReportInfo, found bool)
 	GetMaliciousJailDuration(ctx sdk.Context) (res time.Duration)
 	ClearValidatorMissedRoundBitArray(ctx sdk.Context, validator string)
@@ -66,9 +65,8 @@ type KeeperOracle interface {
 	RemoveRecentMsg(sdk.Context, uint64)
 
 	RemoveNonceWithValidator(ctx sdk.Context, validator string)
-	RemoveNonceWithValidatorAndFeederID(ctx sdk.Context, validator string, feederID uint64) bool
-	RemoveNonceWithFeederIDForValidators(ctx sdk.Context, feederID uint64, validators []string)
-	RemoveNonceWithFeederIDForAll(ctx sdk.Context, feederID uint64)
+	RemoveNonceWithFeederIDsForValidators(ctx sdk.Context, feederIDs []uint64, validators []string)
+	RemoveNonceWithFeederIDsForAll(ctx sdk.Context, feederID []uint64)
 
 	SetNonce(ctx sdk.Context, nonce types.ValidatorNonce)
 	GetSpecifiedAssetsPrice(ctx sdk.Context, assetID string) (types.Price, error)

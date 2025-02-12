@@ -102,6 +102,7 @@ func (c *caches) GetTokenIDForFeederID(feederID int64) (int64, bool) {
 	return int64(tf.TokenID), true
 }
 
+// GetValidators return current validator set as ordered slice
 func (c *caches) GetValidators() []string {
 	return c.validators.slice()
 }
@@ -202,6 +203,7 @@ func (cv *cacheValidator) size() int {
 	return len(cv.validators)
 }
 
+// returned slice is ordered
 func (cv *cacheValidator) slice() []string {
 	if cv.size() == 0 {
 		return nil

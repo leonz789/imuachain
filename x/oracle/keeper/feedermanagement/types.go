@@ -269,6 +269,7 @@ type FeederManager struct {
 	// sortedFeederIDs is the ordered feeder IDs corresponding to all the rounds included in FeederManager
 	sortedFeederIDs orderedSliceInt64
 	// rounds is the map of all rounds included in FeederManager, the key is the feeder ID
+	// TODO: change type of key from int64 to uint64
 	rounds map[int64]*round
 	cs     *caches
 	// paramsUpdated indicates whether the params are updated in current block
