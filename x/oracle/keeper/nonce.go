@@ -113,9 +113,7 @@ func (k Keeper) RemoveNonceWithFeederIDsForAll(ctx sdk.Context, feederIDs []uint
 	for ; iterator.Valid(); iterator.Next() {
 		var nonce types.ValidatorNonce
 		k.cdc.MustUnmarshal(iterator.Value(), &nonce)
-		if nonce, found := k.getNonce(store, nonce.Validator); found {
-			validators = append(validators, nonce.Validator)
-		}
+		validators = append(validators, nonce.Validator)
 	}
 
 	k.removeNonceWithFeederIDsForValidators(store, feederIDs, validators)
