@@ -70,6 +70,7 @@ func (k Keeper) removeNonceWithValidator(store prefix.Store, validator string) {
 }
 
 // AddZeroNonceItemWithFeederIDsForValidators init the nonce of a batch of feederIDs for a set of validators
+// feederIDs must be ordered
 func (k Keeper) AddZeroNonceItemWithFeederIDsForValidators(ctx sdk.Context, feederIDs []uint64, validators []string) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefix(types.NonceKeyPrefix))
 	for _, validator := range validators {
@@ -79,6 +80,7 @@ func (k Keeper) AddZeroNonceItemWithFeederIDsForValidators(ctx sdk.Context, feed
 				fIDs[v.FeederID] = struct{}{}
 			}
 			updated := false
+			// added feederIDs are kept ordered
 			for _, feederID := range feederIDs {
 				if _, ok := fIDs[feederID]; !ok {
 					n.NonceList = append(n.NonceList, &types.Nonce{FeederID: feederID, Value: 0})
@@ -91,6 +93,7 @@ func (k Keeper) AddZeroNonceItemWithFeederIDsForValidators(ctx sdk.Context, feed
 			}
 		} else {
 			n := types.ValidatorNonce{Validator: validator, NonceList: make([]*types.Nonce, 0, len(feederIDs))}
+			// ordered feederIDs
 			for _, feederID := range feederIDs {
 				n.NonceList = append(n.NonceList, &types.Nonce{FeederID: feederID, Value: 0})
 			}
@@ -127,6 +130,7 @@ func (k Keeper) removeNonceWithFeederIDsForValidators(store prefix.Store, feeder
 	for _, validator := range validators {
 		if nonce, found := k.getNonce(store, validator); found {
 			l := len(nonce.NonceList)
+			// the order in nonceList is kept after removed
 			for i := 0; i < l; i++ {
 				n := nonce.NonceList[i]
 				if _, ok := fIDs[n.FeederID]; ok {
