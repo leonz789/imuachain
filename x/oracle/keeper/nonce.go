@@ -126,17 +126,20 @@ func (k Keeper) removeNonceWithFeederIDsForValidators(store prefix.Store, feeder
 	}
 	for _, validator := range validators {
 		if nonce, found := k.getNonce(store, validator); found {
-			newList := make([]*types.Nonce, 0, len(nonce.NonceList))
-			for _, n := range nonce.NonceList {
-				if _, ok := fIDs[n.FeederID]; !ok {
-					newList = append(newList, n)
+			l := len(nonce.NonceList)
+			for i := 0; i < l; i++ {
+				n := nonce.NonceList[i]
+				if _, ok := fIDs[n.FeederID]; ok {
+					nonce.NonceList = append(nonce.NonceList[:i], nonce.NonceList[i+1:]...)
 				}
+				i--
+				l--
 			}
-			if len(newList) > 0 {
-				nonce.NonceList = newList
-				k.setNonce(store, nonce)
-			} else {
+
+			if len(nonce.NonceList) == 0 {
 				k.removeNonceWithValidator(store, validator)
+			} else {
+				k.setNonce(store, nonce)
 			}
 		}
 	}
