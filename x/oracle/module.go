@@ -366,7 +366,10 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 		prevPrice, nextRoundID := am.keeper.GrowRoundID(ctx, tokenID)
 		logger.Info("add new round with previous price under fail aggregation", "tokenID", tokenID, "roundID", nextRoundID, "price", prevPrice)
 	}
-
+	if ctx.BlockHeight() == 9_684_761 {
+		prevPrice, nextRoundID := am.keeper.GrowRoundID(ctx, 1)
+		logger.Error("add new round with previous price under fail aggregation to workaround 9,684,761 consensus fail", "tokenID", 1, "roundID", nextRoundID, "price", prevPrice)
+	}
 	am.keeper.ResetAggregatorContextCheckTx()
 
 	if _, _, paramsUpdated := cs.CommitCache(ctx, false, am.keeper); paramsUpdated {
