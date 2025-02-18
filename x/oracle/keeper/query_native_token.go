@@ -26,9 +26,12 @@ func (k Keeper) StakerInfos(goCtx context.Context, req *types.QueryStakerInfosRe
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	stakerInfosResp, err := k.GetStakerInfos(ctx, req)
+	if err != nil {
+		return stakerInfosResp, err
+	}
 	version := k.GetNSTVersion(ctx, req.AssetId)
 	stakerInfosResp.Version = version
-	return stakerInfosResp, err
+	return stakerInfosResp, nil
 }
 
 func (k Keeper) StakerInfo(goCtx context.Context, req *types.QueryStakerInfoRequest) (*types.QueryStakerInfoResponse, error) {

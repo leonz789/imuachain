@@ -27,7 +27,6 @@ func (k Keeper) InitValidatorReportInfo(ctx sdk.Context, validator string, heigh
 }
 
 func (k Keeper) ClearAllValidatorReportInfo(ctx sdk.Context) {
-	// 	k.ClearAllValidatorMissedRoundBitArray(ctx)
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.ValidatorReportInfoPrefix)
 	iterator := sdk.KVStorePrefixIterator(store, []byte{})
 	for ; iterator.Valid(); iterator.Next() {

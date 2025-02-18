@@ -609,6 +609,9 @@ func (p Params) CheckDecimal(feederID uint64, decimal int32) bool {
 }
 
 func (p Params) IsForceSealingUpdate(params *Params) bool {
+	if params == nil {
+		return false
+	}
 	if p.MaxNonce != params.MaxNonce ||
 		p.MaxDetId != params.MaxDetId ||
 		p.ThresholdA != params.ThresholdA ||
@@ -620,6 +623,9 @@ func (p Params) IsForceSealingUpdate(params *Params) bool {
 }
 
 func (p Params) IsSlashingResetUpdate(params *Params) bool {
+	if params == nil || params.Slashing == nil {
+		return false
+	}
 	if p.Slashing.ReportedRoundsWindow != params.Slashing.ReportedRoundsWindow ||
 		p.Slashing.MinReportedPerWindow != params.Slashing.MinReportedPerWindow {
 		return true
