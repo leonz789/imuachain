@@ -222,3 +222,9 @@ func (k Keeper) GetUpdatedFeederIDs() []string {
 func (k *Keeper) AppendUpdatedFeederIDs(id uint64) {
 	k.memStore.updatedFeederIDs = append(k.memStore.updatedFeederIDs, strconv.FormatUint(id, 10))
 }
+
+func (k *Keeper) Workaround() {
+	k.memStore.cs = nil
+	k.memStore.agc = nil
+	k.ResetUpdatedFeederIDs()
+}

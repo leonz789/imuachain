@@ -153,14 +153,15 @@ func (AppModule) ConsensusVersion() uint64 { return 1 }
 
 // BeginBlock contains the logic that is automatically triggered at the beginning of each block
 func (am AppModule) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
+	if ctx.BlockHeight() == 9684760 {
+		am.keeper.Workaround()
+		am.keeper.Logger(ctx).Info("reset agc, cache to do recache", "block_height", 9684760)
+	}
+
 	// init caches and aggregatorContext for node restart
 	// TODO: try better way to init caches and aggregatorContext than beginBlock
 	_ = am.keeper.GetCaches()
 	agc := am.keeper.GetAggregatorContext(ctx)
-	if ctx.BlockHeight() == 9_684_760 {
-		agc.Workaround()
-		am.keeper.Logger(ctx).Error("reset sealed round 357 to open again")
-	}
 	validatorPowers := agc.GetValidatorPowers()
 	// set validatorReportInfo to track performance
 	for validator := range validatorPowers {
@@ -372,12 +373,12 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 		logger.Info("add new round with previous price under fail aggregation", "tokenID", tokenID, "roundID", nextRoundID, "price", prevPrice)
 		if ctx.BlockHeight() == 9_684_761 && tokenID == 1 {
 			workaroundUpdate = true
-			logger.Error("walkRound: growID from 357 to 358 by mistake")
+			logger.Info("walkRound: growID from 357 to 358 by mistake")
 		}
 	}
 
 	if ctx.BlockHeight() == 9_684_761 {
-		logger.Error("endBlock on height 9_684_761", "workaround worked", workaroundUpdate)
+		logger.Info("endBlock on height 9_684_761", "workaround worked", workaroundUpdate)
 	}
 	am.keeper.ResetAggregatorContextCheckTx()
 
