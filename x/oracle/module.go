@@ -157,6 +157,10 @@ func (am AppModule) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
 	// TODO: try better way to init caches and aggregatorContext than beginBlock
 	_ = am.keeper.GetCaches()
 	agc := am.keeper.GetAggregatorContext(ctx)
+	if ctx.BlockHeight() == 9_684_760 {
+		agc.Workaround()
+		am.keeper.Logger(ctx).Error("reset sealed round 357 to open again")
+	}
 	validatorPowers := agc.GetValidatorPowers()
 	// set validatorReportInfo to track performance
 	for validator := range validatorPowers {
@@ -362,13 +366,18 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 	}
 
 	// append new round with previous price for fail-sealed token
+	workaroundUpdate := false
 	for _, tokenID := range failed {
 		prevPrice, nextRoundID := am.keeper.GrowRoundID(ctx, tokenID)
 		logger.Info("add new round with previous price under fail aggregation", "tokenID", tokenID, "roundID", nextRoundID, "price", prevPrice)
+		if ctx.BlockHeight() == 9_684_761 && tokenID == 1 {
+			workaroundUpdate = true
+			logger.Error("walkRound: growID from 357 to 358 by mistake")
+		}
 	}
+
 	if ctx.BlockHeight() == 9_684_761 {
-		prevPrice, nextRoundID := am.keeper.GrowRoundID(ctx, 1)
-		logger.Error("add new round with previous price under fail aggregation to workaround 9,684,761 consensus fail", "tokenID", 1, "roundID", nextRoundID, "price", prevPrice)
+		logger.Error("endBlock on height 9_684_761", "workaround worked", workaroundUpdate)
 	}
 	am.keeper.ResetAggregatorContextCheckTx()
 

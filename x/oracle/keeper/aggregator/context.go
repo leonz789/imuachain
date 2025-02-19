@@ -432,3 +432,7 @@ func NewAggregatorContext() *AggregatorContext {
 		aggregators:     make(map[uint64]*worker),
 	}
 }
+
+func (agc *AggregatorContext) Workaround() {
+	agc.rounds[1].status = roundStatusOpen
+}
