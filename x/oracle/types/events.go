@@ -1,7 +1,7 @@
 package types
 
 const (
-	EventTypePriceFeed      = "create_price"
+	EventTypePriceFeed      = "price_feed"
 	EventTypeOracleLiveness = "oracle_liveness"
 	EventTypeOracleSlash    = "oracle_slash"
 

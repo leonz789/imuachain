@@ -6,7 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-const TypeMsgPriceFeed = "create_price"
+const TypeMsgPriceFeed = "price_feed"
 
 var _ sdk.Msg = &MsgPriceFeed{}
 
