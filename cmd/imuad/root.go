@@ -51,7 +51,6 @@ import (
 
 	evmoskr "github.com/evmos/evmos/v16/crypto/keyring"
 	cmdcfg "github.com/imua-xyz/imuachain/cmd/config"
-
 	pricefeeder "github.com/imua-xyz/price-feeder/external"
 	feedertypes "github.com/imua-xyz/price-feeder/types"
 )
@@ -146,7 +145,6 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 	preRunE := startCmd.PreRunE
 	// add preRun to run price-feeder first before starting the node
 	startCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		// TODO: Temporarily disable the price feeder to fix the issue caused by two different versions of the EVMOS dependency.
 		// This needs to be re-enabled after the price feeder updates the EVMOS dependency to v16 and updates the Imuachain dependency
 		// to the version that includes this fix.
 		if enableFeeder, _ := cmd.Flags().GetBool(flagOracle); enableFeeder {
@@ -161,7 +159,10 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 					}
 				}()
 				mnemonic, _ := cmd.Flags().GetString(flagMnemonic)
-				pricefeeder.StartPriceFeeder(path.Join(clientCtx.HomeDir, confPath, confOracle), mnemonic, path.Join(clientCtx.HomeDir, confPath))
+				_ = mnemonic
+				_ = clientCtx
+				serverCtx := sdkserver.GetServerContextFromCmd(cmd)
+				pricefeeder.StartPriceFeeder(path.Join(clientCtx.HomeDir, confPath, confOracle), mnemonic, path.Join(clientCtx.HomeDir, confPath), serverCtx.Logger.With("module", "price-feeder"))
 			}()
 		}
 		return preRunE(cmd, args)
