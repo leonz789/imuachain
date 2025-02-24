@@ -33,7 +33,6 @@ func (otpd OracleTwoPhasesDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simu
 		// the proofPath need to be exactly the same of both value and order
 		for i, index := range proofPath {
 			if pieceWithProof.Proof[i].Index != index {
-				// if !pieceWithProof.HasIndexOnProofPath(index) {
 				return ctx, fmt.Errorf("rawData proofPath didn't include necessary index on position:%d of path:%d", i, index)
 			}
 		}

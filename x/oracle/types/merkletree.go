@@ -8,7 +8,7 @@ import (
 // node represents leaf-node
 type Node struct {
 	// hash   *common.Hash
-	// use []byte instead of common.Hash for conveniences for append
+	// use []byte instead of common.Hash for conveniences for appending
 	hash   []byte
 	index  uint32
 	parent *Node
@@ -18,8 +18,7 @@ type Node struct {
 	right *Node
 }
 type MerkleTree struct {
-	t map[uint32]*Node
-	// pieceIndex []uint32
+	t         map[uint32]*Node
 	pieces    [][]byte
 	rawData   []byte
 	leafCount uint32
@@ -271,7 +270,6 @@ func NewMT(pieceSize, totalSize uint32) *MerkleTree {
 	originalLeafCount := leafCount
 
 	ret := &MerkleTree{
-		//		t:         make(map[uint32]*node),
 		pieces:           make([][]byte, 0, leafCount),
 		leafCount:        leafCount,
 		pieceSize:        pieceSize,
@@ -328,12 +326,10 @@ func NewMT(pieceSize, totalSize uint32) *MerkleTree {
 				liftedNodeIndex := i/2 + prevLayersCount + leafCount
 				liftedNode := t[liftedNodeIndex]
 				if liftedNode == nil {
-					//					fmt.Println("lifting node_before...k_index,n_index", liftedNodeIndex, lNode.index)
 					if lNode.index >= originalLeafCount {
 						delete(t, lNode.index)
 						lNode.index = liftedNodeIndex
 					}
-					//					fmt.Println("lifting node_after...k_index,n_index", liftedNodeIndex, lNode.index)
 					t[liftedNodeIndex] = lNode
 				} else {
 					panic("liftedNode must be nil when do lifting")

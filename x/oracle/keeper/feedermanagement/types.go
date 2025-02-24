@@ -293,16 +293,3 @@ type FeederManager struct {
 	// when the slashing params is changed in current block, this will be set to true.
 	resetSlashing bool
 }
-
-// TODO(leonz): use types.MerkleTree instead
-// type Merkle struct {
-// 	root ethcommon.Hash
-// 	// total pieces expected for rawData
-// 	pieceCount uint32
-// 	// hash nodes
-// 	// [0, pieceCount-1] corresponding to the hash nodes of rawData
-// 	MedianNodes map[uint32]*ethcommon.Hash
-// 	// [0, pieceCount-1]
-// 	rawData     map[uint32][]byte
-// 	latestIndex int64
-// }

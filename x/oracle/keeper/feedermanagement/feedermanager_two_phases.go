@@ -9,17 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func (f *FeederManager) RawDataCollecting(feederID uint64) bool {
-	// TODO(leonz): implement me
-	// if r.m.latestIndex == pieceCount return false
-	return false
-}
-
-// func (f *FeederManager) LatestPieceIndexForTokenFeederID(feederID uint64) uint64 {
-// 	// TODO(leonz): implement me
-// 	return 0
-// }
-
 func (f *FeederManager) NextPieceIndexByFeederID(feederID uint64) (uint32, bool) {
 	r, ok := f.rounds[int64(feederID)]
 	if !ok || r.m == nil {
@@ -48,10 +37,9 @@ func (f *FeederManager) VerifyPieceProofsForTokenFeederID(feederID uint64, targe
 
 // GetPieceWithProof verify the message is a valid rawData message and parse the piece of rawData
 func (f *FeederManager) GetPieceWithProof(msg *oracletypes.MsgCreatePrice) (*oracletypes.PieceWithProof, bool) {
-	// TODO: remove comments after update proto
-	//	if !msg.RawData {
-	//		return false, nil
-	//	}
+	if !msg.RawData {
+		return nil, false
+	}
 	if !f.cs.IsRule2PhasesByFeederID(msg.FeederID) {
 		return nil, false
 	}

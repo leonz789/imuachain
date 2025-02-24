@@ -23,27 +23,6 @@ func (k Keeper) ClearNextPieceIndex(ctx sdk.Context, feederID uint64) {
 // NextPieceIndexByFeederID read directly from memory and return the next-piece-index of input feederID
 func (k Keeper) NextPieceIndexByFeederID(ctx sdk.Context, feederID uint64) (uint32, bool) {
 	return k.FeederManager.NextPieceIndexByFeederID(feederID)
-	// store := ctx.KVStore(k.storeKey)
-	// key := types.TwoPhasesFeederKey(feederID)
-	// bz := store.Get(key)
-	//
-	//	if bz == nil {
-	//		return 0, false
-	//	}
-	//
-	// maxPieceIndex, ok := k.FeederManager.MaxPieceIndexForTokenFeederID(feederID)
-	//
-	//	if !ok {
-	//		return 0, false
-	//	}
-	//
-	// nextPieceIndex := types.BytesToUint32(bz)
-	//
-	//	if nextPieceIndex > maxPieceIndex {
-	//		return 0, false
-	//	}
-	//
-	// return types.BytesToUint32(bz), true
 }
 
 // CheckAndIncreasePieceIndex checks and increase the 'nextPieceIndex' of a specific validator and feederID
