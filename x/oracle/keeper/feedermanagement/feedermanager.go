@@ -516,7 +516,8 @@ func (f *FeederManager) updateRoundsParamsAndAddNewRounds(ctx sdk.Context) {
 			if _, ok := existsFeederIDs[feederID]; !ok && (tokenFeeder.EndBlock == 0 || tokenFeeder.EndBlock > uint64(height)) {
 				logger.Info("[mem] add new round", "feederID", feederID, "height", height)
 				f.sortedFeederIDs = append(f.sortedFeederIDs, feederID)
-				f.rounds[feederID] = newRound(feederID, tokenFeeder, int64(params.MaxNonce), f.cs, NewAggMedian())
+				twoPhases := f.cs.IsRule2PhasesByFeederID(uint64(feederID))
+				f.rounds[feederID] = newRound(feederID, tokenFeeder, int64(params.MaxNonce), f.cs, NewAggMedian(), twoPhases)
 			}
 		}
 		f.sortedFeederIDs.sort()
@@ -645,7 +646,9 @@ func (f *FeederManager) ValidateMsg(msg *oracletypes.MsgCreatePrice) error {
 }
 
 func (f *FeederManager) ProcessQuote(ctx sdk.Context, msg *oracletypes.MsgCreatePrice, isCheckTx bool) (*oracletypes.PriceTimeRound, error) {
+	var fDeliverTx *FeederManager
 	if isCheckTx {
+		fDeliverTx = f
 		f = f.getCheckTx()
 	}
 	if err := f.ValidateMsg(msg); err != nil {
@@ -787,7 +790,8 @@ func (f *FeederManager) recovery(ctx sdk.Context) (bool, error) {
 			continue
 		}
 		tfID := int64(tfID)
-		f.rounds[tfID] = newRound(tfID, tf, int64(params.MaxNonce), f.cs, NewAggMedian())
+		twoPhases := f.cs.IsRule2Phases(tfID)
+		f.rounds[tfID] = newRound(tfID, tf, int64(params.MaxNonce), f.cs, NewAggMedian(), twoPhases)
 		f.sortedFeederIDs.add(tfID)
 	}
 	f.prepareRounds(ctxReplay)
@@ -826,6 +830,33 @@ func (f *FeederManager) recovery(ctx sdk.Context) (bool, error) {
 	f.cs.SkipCommit()
 
 	return true, nil
+}
+
+func (f *FeederManager) RoundIDToBaseBlock(feederID, roundID uint64) (uint64, bool) {
+	r, ok := f.rounds[int64(feederID)]
+	if !ok {
+		return 0, false
+	}
+	return r.baseBlockFromRoundID(roundID)
+}
+
+// BaseBlockToRoundID returns the roundID which the input baseblock indicates to, it is different to the roundID of which this baseBlock BelongsTo (+1)
+func (f *FeederManager) BaseBlockToNextRoundID(feederID, baseBlock uint64) (uint64, bool) {
+	//TODO(leonz): use uint64 as f.rounds key
+	// #nosec G115
+	r, ok := f.rounds[int64(feederID)]
+	if !ok {
+		return 0, false
+	}
+	// TODO(leonz): use uint64 for getPosition
+	// #nosec G115
+	b, rID, _, _ := r.getPosition(int64(baseBlock))
+	// #nosec G115
+	if uint64(b) != baseBlock {
+		return 0, false
+	}
+	// #nosec G115
+	return uint64(rID), true
 }
 
 func (f *FeederManager) Equals(fm *FeederManager) bool {

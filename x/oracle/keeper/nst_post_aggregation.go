@@ -424,3 +424,8 @@ func getNSTVersionFromDetID(detID string) (int64, error) {
 	}
 	return nstVersion, nil
 }
+
+// UpdateNSTBalanceChange serves the post handling for nst balance change
+func UpdateNSTBalanceChange(rawData []byte, ctx sdk.Context, k common.Keeper) error {
+	return nil
+}

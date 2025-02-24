@@ -3,8 +3,6 @@ package keeper
 import (
 	"fmt"
 
-	sdkmath "cosmossdk.io/math"
-
 	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
@@ -30,6 +28,7 @@ type (
 		// wrap all four memory cache into one pointer to track them among cpoies of Keeper (msgServer, module)
 		// TODO: remove this
 		*feedermanagement.FeederManager
+		postHandlers map[int64]PostAggregationHandler
 	}
 )
 
@@ -65,19 +64,12 @@ func NewKeeper(
 		assetsKeeper:     assetsKeeper,
 		authority:        authority,
 		SlashingKeeper:   slashingKeeper,
-		//		fm:               feedermanagement.NewFeederManager(nil),
-		FeederManager: feedermanagement.NewFeederManager(nil),
+		FeederManager:    feedermanagement.NewFeederManager(nil),
 	}
-	ret.SetKeeper(ret)
+	ret.FeederManager.SetKeeper(&ret)
 	return ret
 }
 
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
-}
-
-// UpdateNativeTokenValidatorInfo it's used to fix the issue of missing interface.
-// it will be removed when merging with the oracle PR.
-func (k Keeper) UpdateNativeTokenValidatorInfo(_ sdk.Context, _, _, _ string, _ sdkmath.Int) error {
-	return nil
 }

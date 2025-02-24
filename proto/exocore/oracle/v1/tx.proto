@@ -19,19 +19,35 @@ service Msg {
   rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
 }
 
+// ConsensusMode defines the consensus mode for the prices.
+// enum MessagePhase{
+//   option (gogoproto.goproto_enum_prefix) = false;
+//   MESSAGE_PHASE_NON = 0
+//   MESSAGE_PHASE_ONE = 0
+//   MESSAGE_PHASE_TWO = 0
+//   // CONSENSUS_MODE_UNSPECIFIED defines an invalid mode.
+//   CONSENSUS_MODE_UNSPECIFIED = 0 [(gogoproto.enumvalue_customname) = "ConsensusModeUnspecified"];
+//   // CONSENSUS_MODE_ASAP defines the mode to get final price immediately when the voting power
+//   // exceeds the threshold.
+//   CONSENSUS_MODE_ASAP = 1 [(gogoproto.enumvalue_customname) = "ConsensusModeASAP"];
+// }
+
+
 // MsgCreatePrice provide the price updating message
 message MsgCreatePrice {
   // creator tells which is the message sender and should sign this message
   string creator = 1 [(cosmos_proto.scalar) = "cosmos.ValidatorAddressString"];
   // refer to id from Params.TokenFeeders, 0 is reserved, invalid to use
   uint64 feeder_id = 2 [(gogoproto.customname) = "FeederID"];
-
   // prices price with its corresponding source
   repeated PriceSource prices = 3;
   // on which block commit does this message be built on
   uint64 based_block = 4;
   // nonce represents the unique number to disginguish duplicated messages
   int32 nonce = 5;
+  // true: this message includes data of {rawdata, proof} need to be verified based on consensused root
+  // false: this message includes data need to get consensus based on voting power
+  bool raw_data = 6;
 }
 
 // MsgCreatePriceResponse

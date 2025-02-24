@@ -48,3 +48,19 @@ func (msg *MsgCreatePrice) ValidateBasic() error {
 	}
 	return nil
 }
+
+// NOTE: this should be the only way a MsgCreatePriceRawData is derived
+// GetRawData returns wether this is a message with piece of rawData, and parse rawData piece if true
+// NOTE: all method for MsgCreatePriceRawData is assumed that the MsgCreatePriceRawData is derived from MsgCreatePrice by 'feederManager.GetRawData' which had done the basic veirfy, so we don't do that repeatedly
+
+func (msgP *MsgCreatePriceRawData) PieceIndex() uint64 {
+	return msgP.Piece.Index
+}
+
+func (msgP *MsgCreatePriceRawData) GetPieceWithProof() *PieceWithProof {
+	return msgP.Piece
+}
+
+func (msgP *MsgCreatePriceRawData) GetPieceRawData() []byte {
+	return msgP.Piece.RawData
+}

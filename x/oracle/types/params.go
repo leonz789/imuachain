@@ -87,6 +87,7 @@ func DefaultParams() Params {
 			{
 				// all sources math
 				SourceIDs: []uint64{0},
+				Nom:       nil,
 			},
 		},
 		// TokenFeeder describes when a token start to be updated with its price, and the frequency, endTime.
@@ -654,4 +655,12 @@ func (p Params) IsSlashingResetUpdate(params *Params) bool {
 		return true
 	}
 	return false
+}
+
+func (p Params) IsNST(tokenID int) bool {
+	if tokenID >= len(p.Tokens) {
+		return false
+	}
+	token := p.Tokens[tokenID]
+	return strings.HasPrefix(strings.ToLower(token.AssetID), NSTIDPrefix)
 }
