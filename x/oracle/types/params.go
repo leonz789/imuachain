@@ -91,6 +91,7 @@ func DefaultParams() Params {
 			OracleMaliciousJailDuration: 30 * 24 * time.Hour,
 			SlashFractionMalicious:      sdkmath.LegacyNewDec(1).Quo(sdkmath.LegacyNewDec(10)),
 		},
+		PieceSizeByte: 48000,
 	}
 }
 
