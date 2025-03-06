@@ -389,9 +389,9 @@ func (isd IncrementSequenceDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, sim
 	if msgs, isOracle, isRawData := utils.OracleCreatePriceTx(tx); isOracle {
 		msg := msgs[0]
 		// NOTE: we must check startBaseBlock first to prevent ddos by replay history tx
-		expectStartBaseBlock, found := isd.oracleKeeper.LatestStartBaseBlock(msg.FeederID)
+		expectStartBaseBlock, found := isd.oracleKeeper.LatestRoundBaseBlock(msg.FeederID)
 		if !found || msg.BasedBlock != expectStartBaseBlock {
-			return ctx, fmt.Errorf("invalid startBaseBlock, expect:%d, got:%d", expectStartBaseBlock, msg.BasedBlock)
+			return ctx, fmt.Errorf("invalid startBaseBlock, expect:%d, got:%d, height:%d, isCheckTx:%t", expectStartBaseBlock, msg.BasedBlock, ctx.BlockHeight(), ctx.IsCheckTx())
 		}
 		if isRawData {
 			// TODO(leonz): move this to ValidateBasic

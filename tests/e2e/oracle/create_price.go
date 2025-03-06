@@ -347,8 +347,8 @@ func (s *E2ETestSuite) testCreatePriceNST() {
 		},
 	}, *resStakerInfo.StakerInfo)
 
-	// new block - 12, send message with rawData piece to complete nst 2nd phase aggregation
-	s.moveToAndCheck(12)
+	// new block - 8, send message with rawData piece to complete nst 2nd phase aggregation
+	s.moveToAndCheck(8)
 	ps.Prices[0].Price = string(pieces[0])
 	ps.Prices[0].DetID = "0"
 	msg0 = oracletypes.NewMsgCreatePrice2Phase2(creator0.String(), 2, []*oracletypes.PriceSource{&ps}, 7, 1)
@@ -361,8 +361,8 @@ func (s *E2ETestSuite) testCreatePriceNST() {
 	err = s.network.SendTxOracleCreateprice([]sdk.Msg{msg2}, "valconskey2", kr2)
 	s.Require().NoError(err)
 
-	// new block - 14, state of 13 is committed
-	s.moveToAndCheck(14)
+	// new block - 10, state of 9 is committed
+	s.moveToAndCheck(10)
 	resStakerInfo, err = s.network.QueryOracle().StakerInfo(ctx, &oracletypes.QueryStakerInfoRequest{AssetId: network.NativeAssetID, StakerAddr: stakerAddrStr})
 	s.Require().NoError(err)
 	s.Require().Equal(2, len(resStakerInfo.StakerInfo.BalanceList))
@@ -376,7 +376,7 @@ func (s *E2ETestSuite) testCreatePriceNST() {
 		{
 			RoundID: 1,
 			Index:   1,
-			Block:   13,
+			Block:   9,
 			Balance: 99,
 			Change:  oracletypes.Action_ACTION_SLASH_REFUND,
 		},
