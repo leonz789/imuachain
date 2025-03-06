@@ -1130,7 +1130,7 @@ func (f *FeederManager) Equals(fm *FeederManager) bool {
 	return true
 }
 
-func (f *FeederManager) LatestStartBaseBlock(feederID uint64) (uint64, bool) {
+func (f *FeederManager) LatestRoundBaseBlock(feederID uint64) (uint64, bool) {
 	// #nosec G115
 	r, ok := f.rounds[int64(feederID)]
 	if !ok {
@@ -1138,7 +1138,7 @@ func (f *FeederManager) LatestStartBaseBlock(feederID uint64) (uint64, bool) {
 	}
 
 	// #nosec G115
-	return uint64(r.startBaseBlock), true
+	return uint64(r.roundBaseBlock), true
 }
 
 // recoveryStartPoint returns the height to start the recovery process
