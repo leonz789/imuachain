@@ -91,6 +91,9 @@ func (c *caches) IsDeterministic(sourceID int64) (bool, error) {
 // we don't verify the source-name to be 'chainlink' or 'beaconchain', it is satisefied as long as
 // all validators agreed on the same source
 func (c *caches) IsRuleV1(feederID int64) bool {
+	if feederID < 0 || feederID >= int64(len(c.params.params.TokenFeeders)) {
+		return false
+	}
 	p := c.params.params
 	// #nosec - G115 ruleID is assigned with slice index
 	ruleID := int(p.TokenFeeders[feederID].RuleID)
@@ -119,6 +122,9 @@ func (c *caches) IsRuleV1(feederID int64) bool {
 // TODO: forward this to cacheParams
 // IsRule2Phases returns whether a tokenfeeder is restricted by 2-phases rule
 func (c *caches) IsRule2PhasesByFeederID(feederID uint64) bool {
+	if feederID >= uint64(len(c.params.params.TokenFeeders)) {
+		return false
+	}
 	p := c.params.params
 	// #nosec G115 - ruleID is set from index of slice which is actually type of int
 	ruleID := int(p.TokenFeeders[feederID].RuleID)
