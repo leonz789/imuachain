@@ -268,6 +268,8 @@ func (em *ImuaMempool) clearExpiredFeederIDcache(collectingFeederIDs map[uint64]
 			for _, pwp := range pwpList {
 				if pwp.BaseBlock == startBaseBlock {
 					newPwpList = append(newPwpList, pwp)
+				} else {
+					em.count--
 				}
 			}
 			if len(newPwpList) > 0 {
