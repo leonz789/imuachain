@@ -325,7 +325,12 @@ func (m *MerkleTree) GetCopy() *MerkleTree {
 	if m == nil {
 		return nil
 	}
-	ret, _ := NewMT(m.pieceSize, m.leafCount, m.root)
+	ret, err := NewMT(m.pieceSize, m.leafCount, m.root)
+	// err should always be nil when copy on a valid MerkleTree
+	if err != nil {
+		return nil
+	}
+
 	for pIdx, p := range m.t {
 		if p.hash != nil {
 			ret.t[pIdx].hash = make([]byte, len(p.hash))

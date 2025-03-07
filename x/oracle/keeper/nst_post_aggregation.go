@@ -317,7 +317,7 @@ func UpdateNSTBalanceChange(ctx sdk.Context, rawData []byte, feederID, roundID u
 	// #nosec G115
 	v := uint64(k.GetNSTVersion(ctx, assetID))
 	if balanceChanges.Version != v {
-		return fmt.Errorf("version not match, expected%d, got%d", v, balanceChanges.Version)
+		return fmt.Errorf("version not match, expected %d, got %d", v, balanceChanges.Version)
 	}
 	_, chainID, _ := assetstypes.ParseID(assetID)
 	sl := k.GetStakerList(ctx, assetID)
