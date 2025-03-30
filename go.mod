@@ -51,13 +51,28 @@ require (
 
 require (
 	github.com/alitto/pond v1.8.3 // indirect
+	github.com/andres-erbsen/clock v0.0.0-20160526145045-9e14626cd129 // indirect
+	github.com/blendle/zapdriver v1.3.1 // indirect
 	github.com/crypto-org-chain/cronos/memiavl v0.0.5-0.20231027074119-c05c9c61c90e // indirect
 	github.com/crypto-org-chain/cronos/store v0.0.5-0.20231027074119-c05c9c61c90e // indirect
 	github.com/crypto-org-chain/cronos/versiondb v0.0.0-20231027074119-c05c9c61c90e // indirect
+	github.com/fatih/color v1.14.1 // indirect
+	github.com/gagliardetto/binary v0.8.0 // indirect
+	github.com/gagliardetto/solana-go v1.12.0 // indirect
+	github.com/gagliardetto/treeout v0.1.4 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/ledgerwatch/erigon-lib v0.0.0-20230210071639-db0e7ed11263 // indirect
+	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/mostynb/zstdpool-freelist v0.0.0-20201229113212-927304c0c3b1 // indirect
+	github.com/mr-tron/base58 v1.2.0 // indirect
+	github.com/streamingfast/logging v0.0.0-20230608130331-f22c91403091 // indirect
+	go.mongodb.org/mongo-driver v1.12.2 // indirect
+	go.uber.org/ratelimit v0.2.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 )
 
@@ -268,7 +283,8 @@ replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	// use Cosmos-SDK fork to enable Ledger functionality
-	github.com/cosmos/cosmos-sdk => github.com/evmos/cosmos-sdk v0.47.5-evmos.2
+	// github.com/cosmos/cosmos-sdk => github.com/evmos/cosmos-sdk v0.47.5-evmos.2
+	github.com/cosmos/cosmos-sdk => /Users/linqing/workplace/github.com/leonz/evmos/evmos-cosmossdk/cosmos-sdk
 
 	//fix cosmos-sdk error
 	github.com/cosmos/gogoproto => github.com/cosmos/gogoproto v1.4.10
@@ -279,7 +295,8 @@ replace (
 	// Security Advisory https://github.com/advisories/GHSA-h395-qcrw-5vmq
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.9.1
 
-	github.com/imua-xyz/price-feeder v0.2.4 => github.com/leonz789/price-feeder v0.0.0-20250324080635-8013c8814e71
+	// github.com/imua-xyz/price-feeder v0.2.4 => github.com/leonz789/price-feeder v0.0.0-20250324080635-8013c8814e71
+	github.com/imua-xyz/price-feeder v0.2.4 => /Users/linqing/workplace/github.com/leonz/imua-xyz/price-feeder
 
 	// replace broken goleveldb
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7

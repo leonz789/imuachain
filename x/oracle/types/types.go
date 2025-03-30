@@ -107,13 +107,15 @@ type NSTType string
 const (
 	NSTIDPrefix         = "nst_"
 	ETHChain    NSTType = "eth"
-	SOLANAChain NSTType = "solana"
+	SOLChain    NSTType = "sol"
 
 	ETHMainnetChainID  = "0x7595"
 	ETHLocalnetChainID = "0x65"
 	ETHHoleskyChainID  = "0x9d19"
 	ETHSepoliaChainID  = "0x9ce1"
+	SOLLocalChainID    = "0x123"
 	NSTETHAssetAddr    = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+	NSTSOLAssetAddr    = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 
 	DefaultPriceValue   = 1
 	DefaultPriceDecimal = 0
@@ -161,9 +163,11 @@ var (
 		ETHLocalnetChainID: ETHChain,
 		ETHHoleskyChainID:  ETHChain,
 		ETHSepoliaChainID:  ETHChain,
+		SOLLocalChainID:    SOLChain,
 	}
 	NSTAssetAddr = map[NSTType]string{
 		ETHChain: NSTETHAssetAddr,
+		SOLChain: NSTSOLAssetAddr,
 	}
 )
 
