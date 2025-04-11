@@ -57,6 +57,10 @@ func (f *FeederManager) GetTokenIDForFeederID(feederID int64) (int64, bool) {
 	return f.cs.GetTokenIDForFeederID(feederID)
 }
 
+func (f *FeederManager) GetDecimalFromFeederID(feederID uint64) (int32, error) {
+	return f.cs.GetDecimalFromFeederID(feederID)
+}
+
 func (f *FeederManager) SetKeeper(k common.KeeperOracle) {
 	f.k = k
 }

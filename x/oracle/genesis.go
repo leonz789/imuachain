@@ -32,14 +32,11 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) 
 	for _, elem := range genState.RecentParamsList {
 		k.SetRecentParams(ctx, elem)
 	}
-	// Set all stakerList for assetIDs
-	for _, elem := range genState.StakerListAssets {
-		k.SetStakerList(ctx, elem.AssetId, elem.StakerList)
-	}
 	// Set all stakerInfos for assetIDs
 	for _, elem := range genState.StakerInfosAssets {
-		k.SetStakerInfos(ctx, elem.AssetId, elem.StakerInfos)
-		k.SetNSTVersion(ctx, elem.AssetId, elem.NstVersion)
+		// TODO: update the definition of nstVersion to be uint64
+		// #nosec G115
+		k.SetStakerInfosForAsset(ctx, elem.ChainId, elem.StakerInfos, uint64(elem.NstVersion))
 	}
 	// set validatorReportInfos
 	for _, elem := range genState.ValidatorReportInfos {
@@ -84,8 +81,7 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 	genesis.RecentParamsList = k.GetAllRecentParams(ctx)
 
 	// NST related
-	genesis.StakerInfosAssets = k.GetAllStakerInfosAssets(ctx)
-	genesis.StakerListAssets = k.GetAllStakerListAssets(ctx)
+	genesis.StakerInfosAssets, _ = k.GetAllStakerInfosAssets(ctx)
 
 	// slashing related
 	reportInfos := make([]types.ValidatorReportInfo, 0)
