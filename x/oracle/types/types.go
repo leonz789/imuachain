@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"strings"
 
 	sdkmath "cosmossdk.io/math"
@@ -207,4 +208,12 @@ func GetClientChainIDFromNSTAssetID(assetID string) (uint64, bool) {
 		}
 	}
 	return 0, false
+}
+
+func NSTAssetIDFromClientChainID(chainID uint64) string {
+	chainIDStr := hexutil.EncodeUint64(chainID)
+	if NSTChain, ok := NSTChainsInverted[chainIDStr]; ok {
+		return fmt.Sprintf("%s_%s", NSTAssetAddr[NSTChain], chainIDStr)
+	}
+	return ""
 }

@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	keepertest "github.com/imua-xyz/imuachain/testutil/keeper"
+	assetstypes "github.com/imua-xyz/imuachain/x/assets/types"
 	"github.com/imua-xyz/imuachain/x/oracle/keeper"
 	"github.com/imua-xyz/imuachain/x/oracle/types"
 	"github.com/stretchr/testify/require"
@@ -95,6 +96,7 @@ func createNStakerInfos(keeper *keeper.Keeper, ctx sdk.Context, assetID string, 
 			},
 		})
 	}
-	keeper.SetStakerInfos(ctx, assetID, ret)
+	_, chainID, _ := assetstypes.ParseID(assetID)
+	keeper.SetStakerInfosForAsset(ctx, chainID, ret, uint64(n))
 	return ret
 }

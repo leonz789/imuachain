@@ -146,8 +146,10 @@ message QueryStakerInfoResponse {
 message QueryStakerInfosRequest {
   // asset id for the staker info request for
   string asset_id = 1;
+  // balances_all is the flag to indicate whether all balances are requested
+  bool balances_all = 2;
   // pagination defines an optional pagination for the request.
-  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+  cosmos.base.query.v1beta1.PageRequest pagination = 3;
 }
 
 // QueryStakerInfosResponse is response type for Query/StakerInfo RCP method
