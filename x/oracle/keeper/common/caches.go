@@ -1,5 +1,10 @@
 package common
 
+import (
+	"fmt"
+	"slices"
+)
+
 type Caches struct {
 	nstStakerList map[uint64][]string
 }
@@ -79,4 +84,73 @@ func (c *Caches) UpdateNSTStakerList(chainID uint64, from, to int, stakerFrom, s
 	sl = sl[:from]
 	c.nstStakerList[chainID] = sl
 	return true
+}
+
+func (c *Caches) RotateStakerList(chainID uint64, indexes []uint32) (map[uint32]string, error) {
+	if c.nstStakerList == nil {
+		c.nstStakerList = make(map[uint64][]string)
+	}
+	l := len(indexes)
+	if l == 0 {
+		return nil, nil
+	}
+	sl := c.nstStakerList[chainID]
+	l2 := len(sl)
+	if len(sl) == 0 {
+		return nil, fmt.Errorf("remove more stakers than exists, existing:%d, remove:%d", l2, l)
+	}
+	slices.Sort(indexes)
+	// remove duplicates
+	for i := 0; i < l-1; i++ {
+		if indexes[i] == indexes[i+1] {
+			indexes = slices.Delete(indexes, i, i+1)
+			l--
+			i--
+		}
+	}
+	// make sure all indexes are valid
+	if int(indexes[l-1]) >= l2 {
+		return nil, fmt.Errorf("remove index exceeds exisintg max index, max:%d, remove:%d", l2, indexes[l-1])
+	}
+	ret := make(map[uint32]string)
+	removeMap := make(map[uint32]bool)
+	for _, i := range indexes {
+		removeMap[i] = true
+	}
+
+	i := 0
+	j := 1
+	for ; j <= l2 && j <= l; j++ {
+		//#nosec G115
+		if int(indexes[i]) < l2-j && removeMap[uint32(l2-j)] {
+			continue
+		}
+		if int(indexes[i]) == l2-j {
+			j++
+			break
+		}
+		if int(indexes[i]) > l2-j {
+			break
+		}
+		ret[indexes[i]] = sl[l2-j]
+		sl[indexes[i]] = sl[l2-j]
+		i++
+	}
+
+	if j > l2 {
+		j = l2
+		//#nosec G115
+	} else if j > 0 {
+		j--
+	}
+	sl = sl[:l2-j]
+	if len(sl) == 0 {
+		delete(c.nstStakerList, chainID)
+	} else {
+		c.nstStakerList[chainID] = sl
+	}
+	if len(ret) == 0 {
+		ret = nil
+	}
+	return ret, nil
 }
