@@ -129,8 +129,8 @@ func (k Keeper) GetStakerInfos(ctx sdk.Context, req *types.QueryStakerInfosReque
 func (k Keeper) getStakerInfos(store sdk.KVStore, balancesKeyPrefix, key, value []byte, all bool) (*types.StakerInfo, error) {
 	staker := &types.Staker{}
 	k.cdc.MustUnmarshal(value, staker)
-	keyBalances := append(balancesKeyPrefix, key...)
-	value = store.Get(keyBalances)
+	balancesKeyPrefix = append(balancesKeyPrefix, key...)
+	value = store.Get(balancesKeyPrefix)
 	if value == nil {
 		return nil, status.Errorf(codes.NotFound, "staker %s not found", string(key))
 	}
@@ -232,12 +232,11 @@ func (k Keeper) UpdateNSTValidatorListForStaker(ctx sdk.Context, assetID, staker
 	}
 
 	amountConverted, err := k.convertDecimal(ctx, assetID, amount, feederID, true)
-
 	if err != nil {
 		return err
 	}
 
-	_, index, _, err := k.updateStaker(ctx, chainID, 0, amountConverted.Uint64(), stakerAddr, validatorPubkey, types.Action_ACTION_DEPOSIT)
+	index, _, _, err := k.updateStaker(ctx, chainID, 0, amountConverted.Uint64(), stakerAddr, validatorPubkey, types.Action_ACTION_DEPOSIT)
 	if err != nil {
 		return err
 	}
@@ -278,21 +277,12 @@ func (k Keeper) GetNSTVersion(ctx sdk.Context, chainID uint64) uint64 {
 	return sdk.BigEndianToUint64(value)
 }
 
-func (k Keeper) getDecimal(ctx sdk.Context, assetID string) (int, sdkmath.Int, error) {
-	decimalMap, err := k.assetsKeeper.GetAssetsDecimal(ctx, map[string]any{assetID: nil})
-	if err != nil {
-		return 0, sdkmath.ZeroInt(), err
-	}
-	decimal := decimalMap[assetID]
-	return int(decimal), sdkmath.NewIntWithDecimal(1, int(decimal)), nil
-}
-
 // when the balance of staker became zero, we remove it from the staker list and the related data
 // return value is the former last staker which had been moved ahead and its updated index
-func (k Keeper) removeStaker(ctx sdk.Context, chainID uint64, stakerAddr string) (string, uint32) {
-	latestStakerIndex, found := k.GetLatestStakerIndex(ctx, chainID)
+func (k Keeper) removeStaker(ctx sdk.Context, chainID uint64, stakerAddr string) (uint32, bool) {
+	_, found := k.GetLatestStakerIndex(ctx, chainID)
 	if !found {
-		return "", 0
+		return 0, false
 	}
 
 	store := ctx.KVStore(k.storeKey)
@@ -300,7 +290,7 @@ func (k Keeper) removeStaker(ctx sdk.Context, chainID uint64, stakerAddr string)
 	staker := types.Staker{}
 	bz := store.Get(keyStaker)
 	if bz == nil {
-		return "", 0
+		return 0, false
 	}
 
 	k.cdc.MustUnmarshal(bz, &staker)
@@ -312,52 +302,12 @@ func (k Keeper) removeStaker(ctx sdk.Context, chainID uint64, stakerAddr string)
 	keyBalances := types.NSTBalancesKey(chainID, stakerAddr)
 	store.Delete(keyBalances)
 
-	// update latest staker index
-	// checked staker exists early, so latestStakerIndex must be positive
-	var stakerAddrFrom string
-	var toIndex int
-	if latestStakerIndex > removedIndex {
-		// move latest index ahead
-		stakerAddrFrom = string(store.Get(types.NSTStakerAddrKey(chainID, latestStakerIndex)))
-		keyStaker = types.NSTStakerKey(chainID, stakerAddrFrom)
-		bz = store.Get(keyStaker)
-		staker = types.Staker{}
-		k.cdc.MustUnmarshal(bz, &staker)
-		staker.StakerIndex = removedIndex
-		store.Set(keyStaker, k.cdc.MustMarshal(&staker))
-
-		// update index
-		k.SetStakerIndex(ctx, chainID, removedIndex, stakerAddrFrom)
-		toIndex = int(removedIndex)
-	} else {
-		// delete index
-		store.Delete(types.NSTStakerAddrKey(chainID, removedIndex))
-		stakerAddrFrom = stakerAddr
-		toIndex = -1
-	}
-
-	if !k.c.UpdateNSTStakerList(chainID, toIndex, int(latestStakerIndex), stakerAddrFrom, stakerAddr) {
-		sl := k.getStakerListNoCache(ctx, types.NSTAssetIDFromClientChainID(chainID))
-		if len(sl.StakerAddrs) > 0 {
-			k.c.SetNSTStakerList(chainID, sl.StakerAddrs)
-		} else {
-			k.c.RemoveNSTStakerList(chainID)
-		}
-	}
-
-	if latestStakerIndex == 0 {
-		store.Delete(types.NSTLatestStakerIndexKey(chainID))
-	} else {
-		latestStakerIndex--
-		store.Set(types.NSTLatestStakerIndexKey(chainID), types.Uint32Bytes(latestStakerIndex))
-	}
-
 	k.IncreaseVersion(ctx, chainID)
-	return stakerAddr, removedIndex
+	return removedIndex, true
 }
 
 // updateStaker updates the staker's info including: validator list, balance, index, version of assets
-func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance uint64, stakerAddr string, validator string, action types.Action) (updatedStakerAddr string, updatedIndex uint32, balanceDelta sdkmath.Int, err error) {
+func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance uint64, stakerAddr string, validator string, action types.Action) (updatedIndex uint32, removed bool, balanceDelta sdkmath.Int, err error) {
 	store := ctx.KVStore(k.storeKey)
 	if action == types.Action_ACTION_SLASH_REFUND && balance == 0 {
 		// this is a special case, we need to remove the staker from the list
@@ -365,7 +315,9 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance uint64, 
 		keyBalances := types.NSTBalancesKey(chainID, stakerAddr)
 		bz := store.Get(keyBalances)
 		if bz == nil {
-			return
+			balanceDelta = sdkmath.ZeroInt()
+			// nothing to remove, apply no balance change
+			return updatedIndex, removed, balanceDelta, err
 		}
 
 		balances := &types.Balances{}
@@ -373,26 +325,27 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance uint64, 
 		if len(balances.BalanceList) > 0 {
 			balanceDelta = sdkmath.NewIntFromUint64(balances.BalanceList[len(balances.BalanceList)-1].Balance)
 		}
-		updatedStakerAddr, updatedIndex = k.removeStaker(ctx, chainID, stakerAddr)
-		return
+		updatedIndex, removed = k.removeStaker(ctx, chainID, stakerAddr)
+		return updatedIndex, removed, balanceDelta, err
 	}
 
 	if action == types.Action_ACTION_DEPOSIT && len(validator) == 0 {
 		err = fmt.Errorf("deposit should have one validator, but got %d", len(validator))
-		return
+		return updatedIndex, removed, balanceDelta, err
 	}
 
 	stakerInfo := k.GetStakerInfo(ctx, chainID, stakerAddr)
 	if action != types.Action_ACTION_DEPOSIT && (stakerInfo.StakerAddr == "" || len(stakerInfo.BalanceList) == 0) {
 		err = fmt.Errorf("staker or balanceList is not found, stakerAddr is empty: %t, balanceList is empty: %t, action: %s",
 			stakerInfo.StakerAddr == "", len(stakerInfo.BalanceList) == 0, action)
-		return
+		return updatedIndex, removed, balanceDelta, err
 	}
 
 	newBalance := &types.BalanceInfo{
 		RoundID: roundID,
-		Block:   uint64(ctx.BlockHeight()),
-		Change:  action,
+		// #nosec G115
+		Block:  uint64(ctx.BlockHeight()),
+		Change: action,
 	}
 	staker := &types.Staker{
 		ValidatorList: stakerInfo.ValidatorPubkeyList,
@@ -420,6 +373,8 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance uint64, 
 		}
 	}
 
+	updatedIndex = staker.StakerIndex
+
 	// set staker
 	if action == types.Action_ACTION_DEPOSIT {
 		staker.ValidatorList = append(staker.ValidatorList, validator)
@@ -438,7 +393,7 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance uint64, 
 
 	// increase version
 	k.IncreaseVersion(ctx, chainID)
-	return
+	return updatedIndex, removed, balanceDelta, err
 }
 
 func (k Keeper) IncreaseVersion(ctx sdk.Context, chainID uint64) uint64 {
@@ -489,6 +444,41 @@ func (k Keeper) SetStaker(ctx sdk.Context, chainID uint64, stakerAddr string, st
 	bz := k.cdc.MustMarshal(staker)
 	keyStaker := types.NSTStakerKey(chainID, stakerAddr)
 	store.Set(keyStaker, bz)
+}
+
+func (k Keeper) removeStakerIndexes(ctx sdk.Context, chainID uint64, removedIndexes []uint32) error {
+	updatedStakers, err := k.c.RotateStakerList(chainID, removedIndexes)
+	if err != nil {
+		// TODO: do we refresh the cache here ?
+		return fmt.Errorf("failed to rotate stakerList")
+	}
+	l := len(updatedStakers)
+	if l > 0 {
+		store := ctx.KVStore(k.storeKey)
+		keyLatestStakerIndex := types.NSTLatestStakerIndexKey(chainID)
+		latestStakerIndex := types.BytesToUint32(store.Get(keyLatestStakerIndex))
+		if l > int(latestStakerIndex) {
+			store.Delete(keyLatestStakerIndex)
+		} else {
+			// #nosec G115
+			latestStakerIndex -= uint32(l)
+			store.Set(keyLatestStakerIndex, types.Uint32Bytes(latestStakerIndex))
+		}
+		for index, stakerAddr := range updatedStakers {
+			keyStaker := types.NSTStakerKey(chainID, stakerAddr)
+			staker := types.Staker{}
+			bz := store.Get(keyStaker)
+			if bz == nil {
+				return fmt.Errorf("staker %s not found when rotate index for removed stakers", stakerAddr)
+			}
+			k.cdc.MustUnmarshal(bz, &staker)
+			staker.StakerIndex = index
+			store.Set(keyStaker, k.cdc.MustMarshal(&staker))
+			keyStakerAddr := types.NSTStakerAddrKey(chainID, index)
+			store.Set(keyStakerAddr, []byte(stakerAddr))
+		}
+	}
+	return nil
 }
 
 // if fromAssetsMoule=false, it means the opposite way: oracleModule->assetModule
@@ -547,23 +537,45 @@ func UpdateNSTBalanceChange(ctx sdk.Context, rootHash []byte, rawData []byte, fe
 	if balanceChanges.Version != v {
 		return fmt.Errorf("version not match, expected %d, got %d, assetID:%s", v, balanceChanges.Version, assetID)
 	}
+
 	sl := k.GetStakerList(ctx, assetID)
 	if len(sl.StakerAddrs) == 0 {
 		return errors.New("staker list is empty")
 	}
 
+	// fill staker list cache
+	if len(k.c.GetNSTStakerList(chainID)) == 0 {
+		//		_ = k.GetStakerList(ctx, assetID)
+		sl := k.getStakerListNoCache(ctx, assetID)
+		if len(sl.StakerAddrs) > 0 {
+			k.c.SetNSTStakerList(chainID, sl.StakerAddrs)
+		}
+	}
 	cc, writeCache := ctx.CacheContext()
-
+	removedIndexes := make([]uint32, 0)
 	for _, changeKV := range balanceChanges.NstBalanceChanges {
 		stakerAddr := sl.StakerAddrs[changeKV.StakerIndex]
-		_, _, balanceDelta, err := k.updateStaker(cc, chainID, roundID, changeKV.Balance, stakerAddr, "", types.Action_ACTION_SLASH_REFUND)
+		index, removed, balanceDelta, err := k.updateStaker(cc, chainID, roundID, changeKV.Balance, stakerAddr, "", types.Action_ACTION_SLASH_REFUND)
 		if err != nil {
 			return err
+		}
+
+		if removed {
+			removedIndexes = append(removedIndexes, index)
+		}
+		if balanceDelta.IsZero() {
+			continue
 		}
 		if err := k.delegationKeeper.UpdateNSTBalance(cc, getStakerID(stakerAddr, chainID), assetID, balanceDelta); err != nil {
 			return err
 		}
 	}
+
+	if err := k.removeStakerIndexes(cc, chainID, removedIndexes); err != nil {
+		return err
+	}
+
+	// update all removed stakers' index
 	writeCache()
 	version := k.IncreaseVersion(ctx, chainID)
 	base64.StdEncoding.EncodeToString(rootHash)
