@@ -159,10 +159,7 @@ func (k Keeper) GetAllStakerInfosAssets(ctx sdk.Context) ([]types.StakerInfosAss
 	iterator := sdk.KVStorePrefixIterator(storePrefix, []byte{})
 	ret := make([]types.StakerInfosAssets, 0)
 	for ; iterator.Valid(); iterator.Next() {
-		chainID, err := hexutil.DecodeUint64(string(iterator.Key()))
-		if err != nil {
-			return nil, err
-		}
+		chainID := types.BytesToUint64(iterator.Key())
 		iteratorStakers := sdk.KVStorePrefixIterator(store, types.NSTStakerKeyChainIDPrefix(chainID))
 		stakerInfos := make([]*types.StakerInfo, 0)
 		for ; iteratorStakers.Valid(); iteratorStakers.Next() {
