@@ -2,8 +2,6 @@ package types
 
 import (
 	"strings"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 const (
@@ -22,44 +20,86 @@ const (
 	NSTVersionKeyPrefix         = NSTKeyPrefix + "version/"
 )
 
+var (
+	NSTKeyPrefixB                = []byte(NSTKeyPrefix)
+	NSTBalancesKeyPrefixB        = []byte(NSTBalancesKeyPrefix)
+	NSTStakerAddrKeyPrefixB      = []byte(NSTStakerAddrKeyPrefix)
+	NSTLastStakerIndexKeyPrefixB = []byte(NSTLastStakerIndexKeyPrefix)
+	NSTStakerKeyPrefixB          = []byte(NSTStakerKeyPrefix)
+	NSTVersionKeyPrefixB         = []byte(NSTVersionKeyPrefix)
+)
+
 func NSTStakerAddrKeyChainIDPrefix(chainID uint64) []byte {
-	chainIDStr := hexutil.EncodeUint64(chainID)
-	return append([]byte(NSTStakerAddrKeyPrefix), []byte(chainIDStr+"/")...)
+	var key []byte
+	return AppendMultiple(key,
+		NSTStakerAddrKeyPrefixB,
+		Uint64Bytes(chainID),
+		DelimiterForCombinedKeyBytes)
 }
 
 func NSTStakerAddrKey(chainID uint64, stakerIndex uint32) []byte {
-	chainIDStr := hexutil.EncodeUint64(chainID)
-	return append([]byte(NSTStakerAddrKeyPrefix), []byte(chainIDStr+"/"+hexutil.EncodeUint64(uint64(stakerIndex)))...)
+	var key []byte
+	return AppendMultiple(key,
+		NSTStakerAddrKeyPrefixB,
+		Uint64Bytes(chainID),
+		DelimiterForCombinedKeyBytes,
+		Uint32Bytes(stakerIndex),
+	)
 }
 
 func NSTVersionKey(chainID uint64) []byte {
-	chainIDStr := hexutil.EncodeUint64(chainID)
-	return append([]byte(NSTVersionKeyPrefix), []byte(chainIDStr)...)
+	var key []byte
+	return AppendMultiple(key,
+		NSTVersionKeyPrefixB,
+		Uint64Bytes(chainID))
 }
 
 func NSTBalancesKeyChainIDPrefix(chainID uint64) []byte {
-	chainIDStr := hexutil.EncodeUint64(chainID)
-	return append([]byte(NSTBalancesKeyPrefix), []byte(chainIDStr+"/")...)
+	var key []byte
+	return AppendMultiple(key,
+		NSTBalancesKeyPrefixB,
+		Uint64Bytes(chainID))
 }
 
 func NSTBalancesKey(chainID uint64, addr string) []byte {
-	chainIDStr := hexutil.EncodeUint64(chainID)
-	return append([]byte(NSTBalancesKeyPrefix), []byte(chainIDStr+"/"+addr)...)
+	var key []byte
+	return AppendMultiple(
+		key,
+		NSTBalancesKeyPrefixB,
+		Uint64Bytes(chainID),
+		DelimiterForCombinedKeyBytes,
+		[]byte(addr),
+	)
 }
 
 func NSTStakerKeyChainIDPrefix(chainID uint64) []byte {
-	chainIDStr := hexutil.EncodeUint64(chainID)
-	return append([]byte(NSTStakerKeyPrefix), []byte(chainIDStr+"/")...)
+	var key []byte
+	return AppendMultiple(
+		key,
+		NSTStakerKeyPrefixB,
+		Uint64Bytes(chainID),
+		DelimiterForCombinedKeyBytes,
+	)
 }
 
 func NSTStakerKey(chainID uint64, addr string) []byte {
-	chainIDStr := hexutil.EncodeUint64(chainID)
-	return append([]byte(NSTStakerKeyPrefix), []byte(chainIDStr+"/"+addr)...)
+	var key []byte
+	return AppendMultiple(
+		key,
+		NSTStakerKeyPrefixB,
+		Uint64Bytes(chainID),
+		DelimiterForCombinedKeyBytes,
+		[]byte(addr),
+	)
 }
 
 func NSTLatestStakerIndexKey(chainID uint64) []byte {
-	chainIDStr := hexutil.EncodeUint64(chainID)
-	return append([]byte(NSTLastStakerIndexKeyPrefix), []byte(chainIDStr)...)
+	var key []byte
+	return AppendMultiple(
+		key,
+		NSTLastStakerIndexKeyPrefixB,
+		Uint64Bytes(chainID),
+	)
 }
 
 // NativeTokenStakerKeyPrefix returns the prefix for stakerInfo key
