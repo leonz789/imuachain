@@ -32,6 +32,7 @@ func (k Keeper) SetStakerInfosForAsset(ctx sdk.Context, chainID uint64, stakerIn
 	for _, stakerInfo := range stakerInfos {
 		// set staker balances
 		keyBalances := types.NSTBalancesKey(chainID, stakerInfo.StakerAddr)
+		// stakerInfo.BalanceList must have at least one value of Deposit action
 		balances := types.Balances{
 			BalanceList: stakerInfo.BalanceList,
 		}
@@ -47,14 +48,17 @@ func (k Keeper) SetStakerInfosForAsset(ctx sdk.Context, chainID uint64, stakerIn
 		if stakerInfo.StakerIndex > lastIndex {
 			lastIndex = stakerInfo.StakerIndex
 		}
+
+		keyStakerIndex := types.NSTStakerAddrKey(chainID, staker.StakerIndex)
+		store.Set(keyStakerIndex, []byte(stakerInfo.StakerAddr))
 	}
 	// set indexes for staker
 	keyStakerIndex := types.NSTLatestStakerIndexKey(chainID)
-	store.Set(keyStakerIndex, sdk.Uint64ToBigEndian(uint64(lastIndex)))
+	store.Set(keyStakerIndex, types.Uint32Bytes(lastIndex))
 
 	// set version for assetID
 	keyVersion := types.NSTVersionKey(chainID)
-	store.Set(keyVersion, sdk.Uint64ToBigEndian(version))
+	store.Set(keyVersion, types.Uint64Bytes(version))
 }
 
 // GetStakerInfo returns details about staker for native-restaking under asset of assetID
@@ -76,6 +80,7 @@ func (k Keeper) GetStakerInfo(ctx sdk.Context, chainID uint64, stakerAddr string
 	value = store.Get(keyBalances)
 
 	if value == nil {
+		// this should not happen, if balanceList is nil, the corresponding staker should not exist
 		return types.StakerInfo{}
 	}
 
@@ -102,7 +107,7 @@ func (k Keeper) GetStakerInfos(ctx sdk.Context, req *types.QueryStakerInfosReque
 	bz := store.Get(types.NSTVersionKey(chainID))
 	version := uint64(0)
 	if bz != nil {
-		version = sdk.BigEndianToUint64(bz)
+		version = types.BytesToUint64(bz)
 	}
 	storePrefix := prefix.NewStore(store, types.NSTStakerKeyChainIDPrefix(chainID))
 	retStakerInfos := make([]*types.StakerInfo, 0)
@@ -127,21 +132,29 @@ func (k Keeper) GetStakerInfos(ctx sdk.Context, req *types.QueryStakerInfosReque
 }
 
 func (k Keeper) getStakerInfos(store sdk.KVStore, balancesKeyPrefix, key, value []byte, all bool) (*types.StakerInfo, error) {
-	staker := &types.Staker{}
-	k.cdc.MustUnmarshal(value, staker)
-	balancesKeyPrefix = append(balancesKeyPrefix, key...)
-	value = store.Get(balancesKeyPrefix)
 	if value == nil {
 		return nil, status.Errorf(codes.NotFound, "staker %s not found", string(key))
 	}
-	balances := &types.Balances{}
-	k.cdc.MustUnmarshal(value, balances)
+	staker := &types.Staker{}
+	k.cdc.MustUnmarshal(value, staker)
+
+	var keyBalances []byte
+	keyBalances = types.AppendMultiple(keyBalances, balancesKeyPrefix, key)
+	value = store.Get(keyBalances)
+
+	if value == nil {
+		return nil, status.Errorf(codes.NotFound, "balanceList of staker %s not found", string(key))
+	}
 
 	stakerInfo := types.StakerInfo{
 		StakerAddr:          string(key),
 		StakerIndex:         staker.StakerIndex,
 		ValidatorPubkeyList: staker.ValidatorList,
 	}
+
+	balances := &types.Balances{}
+	k.cdc.MustUnmarshal(value, balances)
+	// this should always be true
 	if len(balances.BalanceList) > 0 {
 		if all {
 			stakerInfo.BalanceList = balances.BalanceList
@@ -169,7 +182,7 @@ func (k Keeper) GetAllStakerInfosAssets(ctx sdk.Context) ([]types.StakerInfosAss
 			}
 			stakerInfos = append(stakerInfos, stakerInfo)
 		}
-		version := sdk.BigEndianToUint64(iterator.Value())
+		version := types.BytesToUint64(iterator.Value())
 		ret = append(ret, types.StakerInfosAssets{
 			// #nosec G115
 			NstVersion:  int64(version),
@@ -256,7 +269,7 @@ func (k Keeper) SetNSTVersion(ctx sdk.Context, assetID string, version int64) in
 	store := ctx.KVStore(k.storeKey)
 	key := types.NativeTokenVersionKey(assetID)
 	// #nosec version is not negative
-	store.Set(key, sdk.Uint64ToBigEndian(uint64(version)))
+	store.Set(key, types.Uint64Bytes(uint64(version)))
 	return version
 }
 
@@ -272,7 +285,7 @@ func (k Keeper) GetNSTVersion(ctx sdk.Context, chainID uint64) uint64 {
 	if value == nil {
 		return 0
 	}
-	return sdk.BigEndianToUint64(value)
+	return types.BytesToUint64(value)
 }
 
 // when the balance of staker became zero, we remove it from the staker list and the related data
@@ -399,11 +412,11 @@ func (k Keeper) IncreaseVersion(ctx sdk.Context, chainID uint64) uint64 {
 	key := types.NSTVersionKey(chainID)
 	value := store.Get(key)
 	if value == nil {
-		store.Set(key, sdk.Uint64ToBigEndian(1))
+		store.Set(key, types.Uint64Bytes(1))
 		return 1
 	}
-	version := sdk.BigEndianToUint64(value) + 1
-	store.Set(key, sdk.Uint64ToBigEndian(version))
+	version := types.BytesToUint64(value) + 1
+	store.Set(key, types.Uint64Bytes(version))
 	return version
 }
 
