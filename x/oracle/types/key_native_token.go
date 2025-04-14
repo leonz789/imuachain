@@ -56,9 +56,12 @@ func NSTVersionKey(chainID uint64) []byte {
 
 func NSTBalancesKeyChainIDPrefix(chainID uint64) []byte {
 	var key []byte
-	return AppendMultiple(key,
+	return AppendMultiple(
+		key,
 		NSTBalancesKeyPrefixB,
-		Uint64Bytes(chainID))
+		Uint64Bytes(chainID),
+		DelimiterForCombinedKeyBytes,
+	)
 }
 
 func NSTBalancesKey(chainID uint64, addr string) []byte {
