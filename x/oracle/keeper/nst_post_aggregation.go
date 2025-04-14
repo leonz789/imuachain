@@ -188,7 +188,8 @@ func (k Keeper) getStakerListNoCache(ctx sdk.Context, assetID string) types.Stak
 	_, chainID, _ := assetstypes.ParseID(assetID)
 	store := ctx.KVStore(k.storeKey)
 	keyStakerAddrPrefix := types.NSTStakerAddrKeyChainIDPrefix(chainID)
-	iterator := sdk.KVStorePrefixIterator(store, keyStakerAddrPrefix)
+	store = prefix.NewStore(store, keyStakerAddrPrefix)
+	iterator := sdk.KVStorePrefixIterator(store, []byte{})
 	defer iterator.Close()
 	stakerList := types.StakerList{
 		StakerAddrs: make([]string, 0),

@@ -29,6 +29,7 @@ func (s *E2ETestSuite) testTwoPhaseNST(_ int64) {
 	}
 	s.updateNSTBalance(7, version, c1, stakerAddrStrs, true)
 
+	version = 91
 	s.updateNSTBalance(32, version, c2, stakerAddrStrs, true)
 }
 
