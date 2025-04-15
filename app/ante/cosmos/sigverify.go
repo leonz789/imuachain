@@ -59,12 +59,12 @@ func NewSetPubKeyDecorator(ak authante.AccountKeeper) SetPubKeyDecorator {
 
 func (spkd SetPubKeyDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
 	// skip publickkey set for oracle create-price message
-	_, ok, _, mixed := utils.OracleCreatePriceTx(tx)
+	_, isOracle, _, mixed := utils.OracleCreatePriceTx(tx)
 	// tx shhould not be mixed with oracle create-price message and other messages
 	if mixed {
 		return ctx, errors.New("mixed tx with oracle create-price message")
 	}
-	if ok {
+	if isOracle {
 		sigTx, ok := tx.(authsigning.SigVerifiableTx)
 		if !ok {
 			return ctx, sdkerrors.ErrTxDecode.Wrap("invalid transaction type, expected SigVerifiableTx")
@@ -263,7 +263,7 @@ func OnlyLegacyAminoSigners(sigData signing.SignatureData) bool {
 }
 
 func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
-	if _, ok, _, _ := utils.OracleCreatePriceTx(tx); ok {
+	if _, isOracle, _, _ := utils.OracleCreatePriceTx(tx); isOracle {
 		sigTx, ok := tx.(authsigning.SigVerifiableTx)
 		if !ok {
 			return ctx, sdkerrors.ErrTxDecode.Wrap("invalid transaction type, expected SigVerifiableTx")
