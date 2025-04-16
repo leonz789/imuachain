@@ -106,8 +106,12 @@ func (k Keeper) GetStakerInfos(ctx sdk.Context, req *types.QueryStakerInfosReque
 	// retrieve version
 	bz := store.Get(types.NSTVersionKey(chainID))
 	version := uint64(0)
+	var err error
 	if bz != nil {
-		version = types.BytesToUint64(bz)
+		version, err = types.BytesToUint64(bz)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to parse version: %v", err)
+		}
 	}
 	storePrefix := prefix.NewStore(store, types.NSTStakerKeyChainIDPrefix(chainID))
 	retStakerInfos := make([]*types.StakerInfo, 0)
@@ -172,7 +176,10 @@ func (k Keeper) GetAllStakerInfosAssets(ctx sdk.Context) ([]types.StakerInfosAss
 	iterator := sdk.KVStorePrefixIterator(storePrefix, []byte{})
 	ret := make([]types.StakerInfosAssets, 0)
 	for ; iterator.Valid(); iterator.Next() {
-		chainID := types.BytesToUint64(iterator.Key())
+		chainID, err := types.BytesToUint64(iterator.Key())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse chainID from key: %w", err)
+		}
 		iteratorStakers := sdk.KVStorePrefixIterator(store, types.NSTStakerKeyChainIDPrefix(chainID))
 		stakerInfos := make([]*types.StakerInfo, 0)
 		for ; iteratorStakers.Valid(); iteratorStakers.Next() {
@@ -182,7 +189,10 @@ func (k Keeper) GetAllStakerInfosAssets(ctx sdk.Context) ([]types.StakerInfosAss
 			}
 			stakerInfos = append(stakerInfos, stakerInfo)
 		}
-		version := types.BytesToUint64(iterator.Value())
+		version, err := types.BytesToUint64(iterator.Value())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse version from value: %w", err)
+		}
 		ret = append(ret, types.StakerInfosAssets{
 			// #nosec G115
 			NstVersion:  int64(version),
@@ -285,7 +295,11 @@ func (k Keeper) GetNSTVersion(ctx sdk.Context, chainID uint64) uint64 {
 	if value == nil {
 		return 0
 	}
-	return types.BytesToUint64(value)
+	v, err := types.BytesToUint64(value)
+	if err != nil {
+		return 0
+	}
+	return v
 }
 
 // when the balance of staker became zero, we remove it from the staker list and the related data
@@ -415,7 +429,11 @@ func (k Keeper) IncreaseVersion(ctx sdk.Context, chainID uint64) uint64 {
 		store.Set(key, types.Uint64Bytes(1))
 		return 1
 	}
-	version := types.BytesToUint64(value) + 1
+	version, err := types.BytesToUint64(value)
+	if err != nil {
+		return 0
+	}
+	version++
 	store.Set(key, types.Uint64Bytes(version))
 	return version
 }

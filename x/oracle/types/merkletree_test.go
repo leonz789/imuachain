@@ -139,7 +139,6 @@ func GetNstRootAndPiecesWithParams(stakerCount, version uint32, pieceSize uint32
 	if !ok {
 		panic("derived mt is incorrect")
 	}
-	//	return mt.RootHash(), pieces, changes
 	return mt, changes
 }
 
