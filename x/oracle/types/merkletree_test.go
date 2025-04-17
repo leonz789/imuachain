@@ -11,6 +11,7 @@ import (
 
 var (
 	emptyHashArr = [32]byte{}
+	
 	emptyHash    = emptyHashArr[:]
 )
 
@@ -186,5 +187,88 @@ func test5pieces() {
 		}
 		fmt.Println("this is root node")
 		break
+	}
+}
+
+func TestMerkleTreeSinglePiece(t *testing.T) {
+	piece := []byte("single piece test")
+	mt, err := DeriveMT(uint32(len(piece)), piece)
+	require.NoError(t, err)
+	require.Equal(t, uint32(1), mt.leafCount)
+	// Proof path for the only leaf should be empty
+	path := mt.ProofPathFromLeafIndex(0, false)
+	require.Empty(t, path)
+	// Completed should be true
+	_, ok := mt.CollectedPieces()
+	require.True(t, ok)
+	// CompleteRawData should return the original data
+	data, ok := mt.CompleteRawData()
+	require.True(t, ok)
+	require.Equal(t, piece, data)
+}
+
+func TestMerkleTreeInvalidInputs(t *testing.T) {
+	// Zero piece size
+	_, err := DeriveMT(0, []byte("data"))
+	require.Error(t, err)
+	// Empty data
+	_, err = DeriveMT(32, []byte{})
+	require.Error(t, err)
+	// Mismatched leaf count and data size
+	_ = make([]byte, 64)
+	_, err = NewMT(32, 3, emptyHash) // 3 leaves, but no data
+	require.NoError(t, err)          // Should not error, but tree is empty
+}
+
+func TestMerkleTreeProofVerificationAllLeaves(t *testing.T) {
+	pieceSize := uint32(16)
+	data := make([]byte, 64)
+	for i := range data {
+		data[i] = byte(i)
+	}
+	mt, err := DeriveMT(pieceSize, data)
+	require.NoError(t, err)
+	mtEmpty, err := NewMT(pieceSize, mt.LeafCount(), mt.RootHash())
+	require.NoError(t, err)
+	for i := uint32(0); i < mt.LeafCount(); i++ {
+		proof := mt.MinimalProofByIndex(i)
+		piece := mt.pieces[i]
+		mtEmpty.VerifyAndCacheOrdered(i, piece, proof)
+		if i == mt.LeafCount()-1 {
+			// Last piece should complete the tree
+			_, completed := mtEmpty.CollectedPieces()
+			require.True(t, completed)
+		} else {
+			_, completed := mtEmpty.CollectedPieces()
+			require.False(t, completed)
+		}
+	}
+}
+
+func TestMerkleTreeGetCopyIndependence(t *testing.T) {
+	pieceSize := uint32(8)
+	data := []byte("abcdefghABCDEFGH")
+	mt, err := DeriveMT(pieceSize, data)
+	require.NoError(t, err)
+	mtCopy := mt.GetCopy()
+	require.NotNil(t, mtCopy)
+	// Modify the copy
+	mtCopy.pieces[0] = []byte{'X'}
+	require.NotEqual(t, mt.pieces[0][0], mtCopy.pieces[0][0])
+}
+
+func TestMerkleTreeMinimalProofPathUniqueness(t *testing.T) {
+	pieceSize := uint32(4)
+	data := []byte("abcdefghijkl")
+	mt, err := DeriveMT(pieceSize, data)
+	require.NoError(t, err)
+	for i := uint32(0); i < mt.LeafCount(); i++ {
+		path := mt.MinimalProofPathByIndex(i)
+		seen := make(map[uint32]struct{})
+		for _, idx := range path {
+			_, exists := seen[idx]
+			require.False(t, exists, "duplicate index in minimal proof path")
+			seen[idx] = struct{}{}
+		}
 	}
 }
