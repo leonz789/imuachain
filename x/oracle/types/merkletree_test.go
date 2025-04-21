@@ -80,9 +80,13 @@ func verifyPiece(t *testing.T, index uint32, mt, mtEmpty *MerkleTree, expectedPa
 	proof := mt.MinimalProofByIndex(index)
 	if !skipCheck {
 		proofPath := mt.MinimalProofPathByIndex(index)
-		for i, p := range proof {
-			require.Equal(t, p.Index, proofPath[i])
-			require.Equal(t, proofPath[i], expectedPath[i])
+		if expectedPath == nil {
+			require.Empty(t, proofPath, "expected empty proof path")
+		} else {
+			for i, p := range proof {
+				require.Equal(t, p.Index, proofPath[i])
+				require.Equal(t, proofPath[i], expectedPath[i])
+			}
 		}
 	}
 
