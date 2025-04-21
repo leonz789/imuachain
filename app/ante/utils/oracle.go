@@ -23,22 +23,10 @@ func OracleCreatePriceTx(tx sdk.Tx) (msgsOracle []*oracletypes.MsgCreatePrice, v
 	l := len(msgs)
 	for i := 0; i < l; i++ {
 		msg := msgs[i]
-		//	for _, msg := range msgs {
 		msgOracle, ok := msg.(*oracletypes.MsgCreatePrice)
 
 		if !ok {
-			// when we found one non-oralce message in this tx, this must not be a valid oracle tx
-			if i > 0 {
-				return nil, false, false, true
-			}
-			for j := 1; j < l; j++ {
-				msg = msgs[j]
-				if _, ok = msg.(*oracletypes.MsgCreatePrice); ok {
-					return nil, false, false, true
-				}
-			}
-			// this is a valid(format) tx which don't have any oracle message
-			return nil, false, false, false
+			return nil, false, false, (i > 0 || containsOracleMsgBeyond(msgs, i))
 		}
 
 		if msgOracle.IsPhaseTwo() {
@@ -51,4 +39,13 @@ func OracleCreatePriceTx(tx sdk.Tx) (msgsOracle []*oracletypes.MsgCreatePrice, v
 		msgsOracle = append(msgsOracle, msgOracle)
 	}
 	return msgsOracle, true, false, false
+}
+
+func containsOracleMsgBeyond(msgs []sdk.Msg, i int) bool {
+	for ; i < len(msgs); i++ {
+		if _, ok := (msgs[i]).(*oracletypes.MsgCreatePrice); ok {
+			return true
+		}
+	}
+	return false
 }
