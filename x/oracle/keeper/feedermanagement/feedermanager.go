@@ -33,6 +33,8 @@ func NewFeederManager(k common.KeeperOracle) *FeederManager {
 }
 
 // GetCaches returns the current caches (cs) used by the FeederManager.
+//
+//nolint:revive
 func (f *FeederManager) GetCaches() *caches {
 	return f.cs
 }
