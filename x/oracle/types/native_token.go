@@ -8,3 +8,24 @@ func (b *Balances) Append(bi *BalanceInfo) {
 	}
 	b.BalanceList = append(b.BalanceList, bi)
 }
+
+func NewStakerInfo(stakerAddr, validatorPubkey string, version uint64) *StakerInfo {
+	return &StakerInfo{
+		StakerAddr:  stakerAddr,
+		StakerIndex: 0,
+		ValidatorPubkeyList: []*ValidatorVersion{
+			{
+				ValidatorPubkey: validatorPubkey,
+				Version:         version,
+			},
+		},
+		BalanceList: make([]*BalanceInfo, 0, 1),
+	}
+}
+
+func (s *StakerInfo) Append(b *BalanceInfo) {
+	if len(s.BalanceList) >= maxSize {
+		s.BalanceList = s.BalanceList[len(s.BalanceList)-maxSize:]
+	}
+	s.BalanceList = append(s.BalanceList, b)
+}
