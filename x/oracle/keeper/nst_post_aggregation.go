@@ -397,9 +397,21 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance uint64, 
 
 	updatedIndex = staker.StakerIndex
 
+	//	updatedVersion := k.IncreaseVersion(ctx, chainID, balance)
 	// set staker
 	if action == types.Action_ACTION_DEPOSIT {
-		staker.ValidatorList = append(staker.ValidatorList, validator)
+		updatedVersion := k.IncreaseVersionByDeposit(ctx, chainID, balance)
+		// staker.ValidatorList = append(staker.ValidatorList, validator)
+		staker.ValidatorList = append(staker.ValidatorList, &types.ValidatorVersion{
+			ValidatorPubkey: validator,
+			Version:         updatedVersion,
+		})
+	} else {
+		// update version triggered by feeder(slashing/refund, including withdrawal)
+		_, err = k.IncreaseVersionByFeed(ctx, chainID)
+		if err != nil {
+			return updatedIndex, removed, balanceDelta, err
+		}
 	}
 	k.SetStaker(ctx, chainID, stakerAddr, staker)
 
@@ -414,23 +426,66 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance uint64, 
 	store.Set(keyBalances, bz)
 
 	// increase version
-	k.IncreaseVersion(ctx, chainID)
+	//	k.IncreaseVersion(ctx, chainID)
 	return updatedIndex, removed, balanceDelta, err
 }
 
-// IncreaseVersion increments the NST version for a chainID, used to track state changes.
-func (k Keeper) IncreaseVersion(ctx sdk.Context, chainID uint64) uint64 {
+func (k Keeper) IncreaseVersionByDeposit(ctx sdk.Context, chainID, amountAdd uint64) uint64 {
 	store := ctx.KVStore(k.storeKey)
 	key := types.NSTVersionKey(chainID)
 	value := store.Get(key)
+	var v types.NSTVersion
 	if value == nil {
-		store.Set(key, types.Uint64Bytes(1))
-		return 1
+		v = types.NSTVersion{
+			Version: &types.VersionDepositAmount{
+				Version:       1,
+				DepositAmount: amountAdd,
+			},
+			FeedVersion: &types.VersionDepositAmount{
+				Version:       1,
+				DepositAmount: amountAdd,
+			},
+		}
+	} else {
+		k.cdc.MustUnmarshal(value, &v)
+		v.Version.DepositAmount += amountAdd
+		v.Version.Version++
 	}
-	version := types.BytesToUint64(value) + 1
-	store.Set(key, types.Uint64Bytes(version))
-	return version
+	bz := k.cdc.MustMarshal(&v)
+	store.Set(key, bz)
+	return v.Version.Version
 }
+
+func (k Keeper) IncreaseVersionByFeed(ctx sdk.Context, chainID uint64) (uint64, error) {
+	store := ctx.KVStore(k.storeKey)
+	key := types.NSTVersionKey(chainID)
+	value := store.Get(key)
+	var v types.NSTVersion
+	if value == nil {
+		// this should not happen when the workflow is correct (feeding price can only happen after deposit)
+		return 0, errors.New("version not found")
+	}
+	k.cdc.MustUnmarshal(value, &v)
+	v.Version.Version++
+	v.FeedVersion.Version = v.Version.Version
+	bz := k.cdc.MustMarshal(&v)
+	store.Set(key, bz)
+	return v.Version.Version, nil
+}
+
+// IncreaseVersion increments the NST version for a chainID, used to track state changes.
+// func (k Keeper) IncreaseVersion(ctx sdk.Context, chainID uint64) uint64 {
+// 	store := ctx.KVStore(k.storeKey)
+// 	key := types.NSTVersionKey(chainID)
+// 	value := store.Get(key)
+// 	if value == nil {
+// 		store.Set(key, types.Uint64Bytes(1))
+// 		return 1
+// 	}
+// 	version := types.BytesToUint64(value) + 1
+// 	store.Set(key, types.Uint64Bytes(version))
+// 	return version
+// }
 
 // SetStakerIndex sets the mapping from staker index to address for a chainID.
 func (k Keeper) SetStakerIndex(ctx sdk.Context, chainID uint64, index uint32, stakerAddr string) {

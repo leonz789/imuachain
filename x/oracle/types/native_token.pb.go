@@ -149,7 +149,7 @@ type StakerInfo struct {
 	// the index of corresponding staker in staker list
 	StakerIndex uint32 `protobuf:"varint,2,opt,name=staker_index,json=stakerIndex,proto3" json:"staker_index,omitempty"`
 	// list of validators that this staker corresponding to on beacon chain
-	ValidatorPubkeyList []string `protobuf:"bytes,3,rep,name=validator_pubkey_list,json=validatorPubkeyList,proto3" json:"validator_pubkey_list,omitempty"`
+	ValidatorPubkeyList []*ValidatorVersion `protobuf:"bytes,3,rep,name=validator_pubkey_list,json=validatorPubkeyList,proto3" json:"validator_pubkey_list,omitempty"`
 	// list of balances to represets the history of this staker
 	BalanceList []*BalanceInfo `protobuf:"bytes,4,rep,name=balance_list,json=balanceList,proto3" json:"balance_list,omitempty"`
 }
@@ -201,7 +201,7 @@ func (m *StakerInfo) GetStakerIndex() uint32 {
 	return 0
 }
 
-func (m *StakerInfo) GetValidatorPubkeyList() []string {
+func (m *StakerInfo) GetValidatorPubkeyList() []*ValidatorVersion {
 	if m != nil {
 		return m.ValidatorPubkeyList
 	}
@@ -266,7 +266,7 @@ type Staker struct {
 	// staker's index
 	StakerIndex uint32 `protobuf:"varint,1,opt,name=staker_index,json=stakerIndex,proto3" json:"staker_index,omitempty"`
 	// validtor_list is the list of validators that this staker corresponding to on beacon chain
-	ValidatorList []string `protobuf:"bytes,2,rep,name=validator_list,json=validatorList,proto3" json:"validator_list,omitempty"`
+	ValidatorList []*ValidatorVersion `protobuf:"bytes,2,rep,name=validator_list,json=validatorList,proto3" json:"validator_list,omitempty"`
 }
 
 func (m *Staker) Reset()         { *m = Staker{} }
@@ -309,7 +309,7 @@ func (m *Staker) GetStakerIndex() uint32 {
 	return 0
 }
 
-func (m *Staker) GetValidatorList() []string {
+func (m *Staker) GetValidatorList() []*ValidatorVersion {
 	if m != nil {
 		return m.ValidatorList
 	}
@@ -362,6 +362,171 @@ func (m *Balances) GetBalanceList() []*BalanceInfo {
 	return nil
 }
 
+// ValidatorVersion defines the version of a validator
+type ValidatorVersion struct {
+	// validator's public key
+	ValidatorPubkey string `protobuf:"bytes,1,opt,name=validator_pubkey,json=validatorPubkey,proto3" json:"validator_pubkey,omitempty"`
+	// version of the validator
+	Version uint64 `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+}
+
+func (m *ValidatorVersion) Reset()         { *m = ValidatorVersion{} }
+func (m *ValidatorVersion) String() string { return proto.CompactTextString(m) }
+func (*ValidatorVersion) ProtoMessage()    {}
+func (*ValidatorVersion) Descriptor() ([]byte, []int) {
+	return fileDescriptor_defbc9a40b211816, []int{5}
+}
+func (m *ValidatorVersion) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ValidatorVersion) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ValidatorVersion.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ValidatorVersion) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ValidatorVersion.Merge(m, src)
+}
+func (m *ValidatorVersion) XXX_Size() int {
+	return m.Size()
+}
+func (m *ValidatorVersion) XXX_DiscardUnknown() {
+	xxx_messageInfo_ValidatorVersion.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ValidatorVersion proto.InternalMessageInfo
+
+func (m *ValidatorVersion) GetValidatorPubkey() string {
+	if m != nil {
+		return m.ValidatorPubkey
+	}
+	return ""
+}
+
+func (m *ValidatorVersion) GetVersion() uint64 {
+	if m != nil {
+		return m.Version
+	}
+	return 0
+}
+
+// NSTVersion defines the version of native-staking token
+type NSTVersion struct {
+	// version of the nst info (on balance change, on deposit/withdraw)
+	Version *VersionDepositAmount `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	// version of the nst info (on balance change, on deposit/withdraw) based on which price-feeder should submit balance change
+	FeedVersion *VersionDepositAmount `protobuf:"bytes,2,opt,name=feed_version,json=feedVersion,proto3" json:"feed_version,omitempty"`
+}
+
+func (m *NSTVersion) Reset()         { *m = NSTVersion{} }
+func (m *NSTVersion) String() string { return proto.CompactTextString(m) }
+func (*NSTVersion) ProtoMessage()    {}
+func (*NSTVersion) Descriptor() ([]byte, []int) {
+	return fileDescriptor_defbc9a40b211816, []int{6}
+}
+func (m *NSTVersion) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *NSTVersion) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_NSTVersion.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *NSTVersion) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NSTVersion.Merge(m, src)
+}
+func (m *NSTVersion) XXX_Size() int {
+	return m.Size()
+}
+func (m *NSTVersion) XXX_DiscardUnknown() {
+	xxx_messageInfo_NSTVersion.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NSTVersion proto.InternalMessageInfo
+
+func (m *NSTVersion) GetVersion() *VersionDepositAmount {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
+
+func (m *NSTVersion) GetFeedVersion() *VersionDepositAmount {
+	if m != nil {
+		return m.FeedVersion
+	}
+	return nil
+}
+
+// VersionDepositAmount defines the version and deposit amount
+type VersionDepositAmount struct {
+	// version of the nst info (on balance change, on deposit/withdraw)
+	Version uint64 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	// accumulated deposit amount
+	DepositAmount uint64 `protobuf:"varint,2,opt,name=deposit_amount,json=depositAmount,proto3" json:"deposit_amount,omitempty"`
+}
+
+func (m *VersionDepositAmount) Reset()         { *m = VersionDepositAmount{} }
+func (m *VersionDepositAmount) String() string { return proto.CompactTextString(m) }
+func (*VersionDepositAmount) ProtoMessage()    {}
+func (*VersionDepositAmount) Descriptor() ([]byte, []int) {
+	return fileDescriptor_defbc9a40b211816, []int{7}
+}
+func (m *VersionDepositAmount) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VersionDepositAmount) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VersionDepositAmount.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *VersionDepositAmount) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VersionDepositAmount.Merge(m, src)
+}
+func (m *VersionDepositAmount) XXX_Size() int {
+	return m.Size()
+}
+func (m *VersionDepositAmount) XXX_DiscardUnknown() {
+	xxx_messageInfo_VersionDepositAmount.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_VersionDepositAmount proto.InternalMessageInfo
+
+func (m *VersionDepositAmount) GetVersion() uint64 {
+	if m != nil {
+		return m.Version
+	}
+	return 0
+}
+
+func (m *VersionDepositAmount) GetDepositAmount() uint64 {
+	if m != nil {
+		return m.DepositAmount
+	}
+	return 0
+}
+
 func init() {
 	proto.RegisterEnum("imuachain.oracle.v1.Action", Action_name, Action_value)
 	proto.RegisterType((*BalanceInfo)(nil), "imuachain.oracle.v1.BalanceInfo")
@@ -369,6 +534,9 @@ func init() {
 	proto.RegisterType((*StakerList)(nil), "imuachain.oracle.v1.StakerList")
 	proto.RegisterType((*Staker)(nil), "imuachain.oracle.v1.Staker")
 	proto.RegisterType((*Balances)(nil), "imuachain.oracle.v1.Balances")
+	proto.RegisterType((*ValidatorVersion)(nil), "imuachain.oracle.v1.ValidatorVersion")
+	proto.RegisterType((*NSTVersion)(nil), "imuachain.oracle.v1.NSTVersion")
+	proto.RegisterType((*VersionDepositAmount)(nil), "imuachain.oracle.v1.VersionDepositAmount")
 }
 
 func init() {
@@ -376,40 +544,47 @@ func init() {
 }
 
 var fileDescriptor_defbc9a40b211816 = []byte{
-	// 515 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x93, 0xd1, 0x8a, 0xda, 0x40,
-	0x14, 0x86, 0x1d, 0x75, 0x75, 0xf7, 0x64, 0xd7, 0xca, 0xb8, 0xa5, 0xa1, 0x2d, 0x59, 0x2b, 0x74,
-	0x91, 0xd2, 0x26, 0xac, 0xfb, 0x04, 0x6a, 0x94, 0x0d, 0x2c, 0x2a, 0xa3, 0xb2, 0xd0, 0x9b, 0x30,
-	0x26, 0xa9, 0x06, 0xdd, 0x8c, 0x24, 0xa3, 0x68, 0x9f, 0xa2, 0x8f, 0xd2, 0xc7, 0x68, 0xef, 0xf6,
-	0xb2, 0x57, 0xa5, 0xe8, 0x8b, 0x94, 0xcc, 0x44, 0x2d, 0xb8, 0x57, 0xbd, 0xf3, 0xfc, 0xe7, 0x3f,
-	0x67, 0xbe, 0xdf, 0x70, 0xe0, 0xda, 0x7f, 0x5c, 0x50, 0x67, 0x42, 0xfd, 0xc0, 0x60, 0x21, 0x75,
-	0x66, 0x9e, 0xb1, 0xbc, 0x31, 0x02, 0xca, 0xfd, 0xa5, 0x67, 0x73, 0x36, 0xf5, 0x02, 0x7d, 0x1e,
-	0x32, 0xce, 0x70, 0x69, 0xef, 0xd3, 0xa5, 0x4f, 0x5f, 0xde, 0xbc, 0xbe, 0x1c, 0xb3, 0x31, 0x13,
-	0x7d, 0x23, 0xfe, 0x25, 0xad, 0x95, 0xef, 0x08, 0x94, 0x06, 0x9d, 0xd1, 0xc0, 0xf1, 0xac, 0xe0,
-	0x0b, 0xc3, 0xd7, 0x70, 0x1a, 0xb2, 0x45, 0xe0, 0xda, 0xbe, 0xab, 0xa2, 0x32, 0xaa, 0x66, 0x1b,
-	0xca, 0xe6, 0xf7, 0x55, 0x9e, 0xc4, 0x9a, 0x65, 0x92, 0xbc, 0x68, 0x5a, 0x2e, 0xbe, 0x84, 0x93,
-	0xd1, 0x8c, 0x39, 0x53, 0x35, 0x1d, 0x9b, 0x88, 0x2c, 0x62, 0xd5, 0x0f, 0x5c, 0x6f, 0xa5, 0x66,
-	0xa4, 0x2a, 0x0a, 0xac, 0x42, 0x7e, 0x24, 0x9f, 0x50, 0xb3, 0x42, 0xdf, 0x95, 0xf8, 0x16, 0x72,
-	0xce, 0x84, 0x06, 0x63, 0x4f, 0x3d, 0x29, 0xa3, 0x6a, 0xa1, 0xf6, 0x46, 0x7f, 0x86, 0x5c, 0xaf,
-	0x3b, 0xdc, 0x67, 0x01, 0x49, 0xac, 0x95, 0x9f, 0x08, 0xa0, 0xcf, 0xe9, 0xd4, 0x0b, 0x05, 0xf1,
-	0x15, 0x28, 0x91, 0xa8, 0x6c, 0xea, 0xba, 0xa1, 0x80, 0x3e, 0x23, 0x20, 0xa5, 0xba, 0xeb, 0x86,
-	0xf8, 0x1d, 0x9c, 0x27, 0x06, 0xc9, 0x16, 0x13, 0x5f, 0x90, 0x64, 0xc8, 0x12, 0x84, 0x35, 0x78,
-	0xb9, 0xa4, 0x33, 0xdf, 0xa5, 0x9c, 0x85, 0xf6, 0x7c, 0x31, 0x9a, 0x7a, 0x6b, 0x7b, 0xe6, 0x47,
-	0x5c, 0xcd, 0x94, 0x33, 0xd5, 0x33, 0x52, 0xda, 0x37, 0x7b, 0xa2, 0x77, 0xef, 0x47, 0x1c, 0x37,
-	0xe1, 0x3c, 0x89, 0x21, 0xad, 0xd9, 0x72, 0xa6, 0xaa, 0xd4, 0xca, 0xcf, 0x26, 0xf8, 0xe7, 0x1f,
-	0x26, 0x4a, 0x32, 0x15, 0x2f, 0xa9, 0x18, 0xbb, 0x28, 0x62, 0xe5, 0x81, 0x34, 0x8e, 0x12, 0xa9,
-	0x48, 0xbc, 0xae, 0x1c, 0xb2, 0x44, 0x15, 0x02, 0x39, 0x39, 0x70, 0x14, 0x0b, 0x1d, 0xc7, 0x7a,
-	0x0f, 0x85, 0x43, 0x2c, 0x01, 0x99, 0x16, 0x1b, 0x2f, 0xf6, 0xaa, 0x80, 0xe8, 0xc2, 0x69, 0x02,
-	0x18, 0x1d, 0xa5, 0x42, 0xff, 0x91, 0xea, 0xc3, 0x04, 0x72, 0xf2, 0x9b, 0xe1, 0xb7, 0xa0, 0xd6,
-	0x9b, 0x03, 0xab, 0xdb, 0xb1, 0x49, 0x77, 0xd8, 0x31, 0xed, 0x61, 0xa7, 0xdf, 0x6b, 0x35, 0xad,
-	0xb6, 0xd5, 0x32, 0x8b, 0x29, 0x8c, 0xa1, 0x90, 0x74, 0xcd, 0x56, 0xaf, 0xdb, 0xb7, 0x06, 0x45,
-	0x84, 0x4b, 0xf0, 0x22, 0xd1, 0x1e, 0xac, 0xc1, 0x9d, 0x49, 0xea, 0x0f, 0xc5, 0x34, 0x7e, 0x05,
-	0xa5, 0x44, 0xec, 0xdf, 0xd7, 0xfb, 0x77, 0x36, 0x69, 0xb5, 0x87, 0x1d, 0xb3, 0x98, 0x69, 0xb4,
-	0x7f, 0x6c, 0x34, 0xf4, 0xb4, 0xd1, 0xd0, 0x9f, 0x8d, 0x86, 0xbe, 0x6d, 0xb5, 0xd4, 0xd3, 0x56,
-	0x4b, 0xfd, 0xda, 0x6a, 0xa9, 0xcf, 0x1f, 0xc7, 0x3e, 0x9f, 0x2c, 0x46, 0xba, 0xc3, 0x1e, 0x8d,
-	0x18, 0xfe, 0xd3, 0x6a, 0xfd, 0xd5, 0x38, 0xdc, 0xcf, 0x6a, 0x77, 0x41, 0x7c, 0x3d, 0xf7, 0xa2,
-	0x51, 0x4e, 0x5c, 0xc3, 0xed, 0xdf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x8e, 0x89, 0x04, 0x13, 0x62,
-	0x03, 0x00, 0x00,
+	// 633 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x94, 0x5f, 0x6e, 0xda, 0x4c,
+	0x14, 0xc5, 0x99, 0x90, 0x90, 0xe4, 0x3a, 0x21, 0x68, 0xc8, 0xa7, 0xcf, 0x6a, 0x2b, 0x42, 0x91,
+	0x12, 0x91, 0xaa, 0xc5, 0x4a, 0xb2, 0x02, 0x82, 0x89, 0x62, 0x09, 0x41, 0x64, 0x93, 0xa0, 0xf6,
+	0xc5, 0x32, 0xf6, 0x04, 0x2c, 0x88, 0x07, 0xd9, 0x06, 0x85, 0xae, 0xa2, 0x3b, 0xe8, 0x16, 0xba,
+	0x8c, 0x3e, 0xe6, 0xb1, 0x4f, 0x55, 0x45, 0x36, 0xd0, 0x25, 0x54, 0xf3, 0xc7, 0x40, 0x13, 0x5e,
+	0xd2, 0x37, 0xee, 0x9d, 0x73, 0xcf, 0x9c, 0x1f, 0x33, 0x1e, 0x38, 0xf2, 0xef, 0xc6, 0x8e, 0xdb,
+	0x77, 0xfc, 0x40, 0xa3, 0xa1, 0xe3, 0x0e, 0x89, 0x36, 0x39, 0xd1, 0x02, 0x27, 0xf6, 0x27, 0xc4,
+	0x8e, 0xe9, 0x80, 0x04, 0x95, 0x51, 0x48, 0x63, 0x8a, 0xf3, 0x73, 0x5d, 0x45, 0xe8, 0x2a, 0x93,
+	0x93, 0x57, 0xfb, 0x3d, 0xda, 0xa3, 0x7c, 0x5d, 0x63, 0xbf, 0x84, 0xb4, 0xf4, 0x0d, 0x81, 0x72,
+	0xee, 0x0c, 0x9d, 0xc0, 0x25, 0x46, 0x70, 0x4b, 0xf1, 0x11, 0x6c, 0x85, 0x74, 0x1c, 0x78, 0xb6,
+	0xef, 0xa9, 0xa8, 0x88, 0xca, 0xeb, 0xe7, 0xca, 0xec, 0xe7, 0xc1, 0xa6, 0xc9, 0x7a, 0x86, 0x6e,
+	0x6e, 0xf2, 0x45, 0xc3, 0xc3, 0xfb, 0xb0, 0xd1, 0x1d, 0x52, 0x77, 0xa0, 0xae, 0x31, 0x91, 0x29,
+	0x0a, 0xd6, 0xf5, 0x03, 0x8f, 0xdc, 0xab, 0x69, 0xd1, 0xe5, 0x05, 0x56, 0x61, 0xb3, 0x2b, 0xb6,
+	0x50, 0xd7, 0x79, 0x3f, 0x29, 0xf1, 0x19, 0x64, 0xdc, 0xbe, 0x13, 0xf4, 0x88, 0xba, 0x51, 0x44,
+	0xe5, 0xec, 0xe9, 0xeb, 0xca, 0x8a, 0xe4, 0x95, 0xaa, 0x1b, 0xfb, 0x34, 0x30, 0xa5, 0xb4, 0xf4,
+	0x1b, 0x01, 0x58, 0xb1, 0x33, 0x20, 0x21, 0x4f, 0x7c, 0x00, 0x4a, 0xc4, 0x2b, 0xdb, 0xf1, 0xbc,
+	0x90, 0x87, 0xde, 0x36, 0x41, 0xb4, 0xaa, 0x9e, 0x17, 0xe2, 0xb7, 0xb0, 0x23, 0x05, 0x22, 0x1b,
+	0x4b, 0xbc, 0x6b, 0xca, 0x21, 0x83, 0x27, 0xfc, 0x08, 0xff, 0x4d, 0x9c, 0xa1, 0xef, 0x39, 0x31,
+	0x0d, 0xed, 0xd1, 0xb8, 0x3b, 0x20, 0x53, 0x7b, 0xe8, 0x47, 0xb1, 0x9a, 0x2e, 0xa6, 0xcb, 0xca,
+	0xe9, 0xe1, 0xca, 0x58, 0x37, 0xc9, 0xc4, 0x0d, 0x09, 0x23, 0x16, 0x30, 0x3f, 0xf7, 0xb8, 0xe2,
+	0x16, 0x0d, 0x3f, 0x8a, 0x71, 0x0d, 0x76, 0x24, 0xad, 0x70, 0x5c, 0xe7, 0x8e, 0xc5, 0x95, 0x8e,
+	0x4b, 0x07, 0x61, 0x2a, 0x72, 0x8a, 0x99, 0x94, 0xb4, 0x84, 0x98, 0x5b, 0x2e, 0x80, 0x18, 0x71,
+	0xa4, 0xa2, 0x62, 0xba, 0xbc, 0x9d, 0x00, 0x31, 0xe4, 0xa8, 0x34, 0x85, 0x8c, 0x18, 0x78, 0x46,
+	0x8f, 0x9e, 0xd3, 0x37, 0x20, 0xbb, 0xa0, 0xe7, 0x21, 0xd7, 0x5e, 0x82, 0xbd, 0x3b, 0x1f, 0xe6,
+	0x59, 0x5b, 0xb0, 0x25, 0x39, 0xa2, 0x67, 0xf0, 0xe8, 0x5f, 0xe0, 0x3b, 0x90, 0x7b, 0xba, 0x27,
+	0x3e, 0x86, 0xdc, 0xd3, 0x03, 0x93, 0x27, 0xbf, 0xf7, 0xe4, 0x10, 0xd8, 0xed, 0x9b, 0x88, 0x29,
+	0x79, 0x57, 0x93, 0xb2, 0xf4, 0x15, 0x01, 0x34, 0xad, 0x76, 0xe2, 0x59, 0x5b, 0x08, 0x99, 0x95,
+	0x72, 0x7a, 0xbc, 0x9a, 0x5f, 0x68, 0x74, 0x32, 0xa2, 0x91, 0x1f, 0x57, 0xef, 0xe8, 0x38, 0x88,
+	0xe7, 0x9e, 0xb8, 0x01, 0x3b, 0xb7, 0x84, 0x78, 0xf6, 0xf2, 0x96, 0x2f, 0x72, 0x52, 0xd8, 0xb8,
+	0x5c, 0x29, 0x75, 0x60, 0x7f, 0x95, 0x68, 0x99, 0x09, 0xfd, 0xc5, 0x84, 0x0f, 0x21, 0xeb, 0x09,
+	0xa9, 0xed, 0x70, 0xad, 0x84, 0xde, 0xf5, 0x96, 0x0d, 0xde, 0xf5, 0x21, 0x23, 0xbe, 0x2a, 0xfc,
+	0x06, 0xd4, 0x6a, 0xad, 0x6d, 0xb4, 0x9a, 0xb6, 0xd9, 0xba, 0x6e, 0xea, 0xf6, 0x75, 0xd3, 0xba,
+	0xaa, 0xd7, 0x8c, 0x0b, 0xa3, 0xae, 0xe7, 0x52, 0x18, 0x43, 0x56, 0xae, 0xea, 0xf5, 0xab, 0x96,
+	0x65, 0xb4, 0x73, 0x08, 0xe7, 0x61, 0x4f, 0xf6, 0x3a, 0x46, 0xfb, 0x52, 0x37, 0xab, 0x9d, 0xdc,
+	0x1a, 0xfe, 0x1f, 0xf2, 0xb2, 0x69, 0x35, 0xaa, 0xd6, 0xa5, 0x6d, 0xd6, 0x2f, 0xae, 0x9b, 0x7a,
+	0x2e, 0x7d, 0x7e, 0xf1, 0x7d, 0x56, 0x40, 0x0f, 0xb3, 0x02, 0xfa, 0x35, 0x2b, 0xa0, 0x2f, 0x8f,
+	0x85, 0xd4, 0xc3, 0x63, 0x21, 0xf5, 0xe3, 0xb1, 0x90, 0xfa, 0xf4, 0xbe, 0xe7, 0xc7, 0xfd, 0x71,
+	0xb7, 0xe2, 0xd2, 0x3b, 0x8d, 0xfd, 0x3d, 0x1f, 0xee, 0xa7, 0x9f, 0xb5, 0xc5, 0x0b, 0x77, 0x9f,
+	0xbc, 0x71, 0xf1, 0x74, 0x44, 0xa2, 0x6e, 0x86, 0xbf, 0x57, 0x67, 0x7f, 0x02, 0x00, 0x00, 0xff,
+	0xff, 0x56, 0x1e, 0xa1, 0x31, 0x04, 0x05, 0x00, 0x00,
 }
 
 func (m *BalanceInfo) Marshal() (dAtA []byte, err error) {
@@ -496,9 +671,14 @@ func (m *StakerInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	}
 	if len(m.ValidatorPubkeyList) > 0 {
 		for iNdEx := len(m.ValidatorPubkeyList) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.ValidatorPubkeyList[iNdEx])
-			copy(dAtA[i:], m.ValidatorPubkeyList[iNdEx])
-			i = encodeVarintNativeToken(dAtA, i, uint64(len(m.ValidatorPubkeyList[iNdEx])))
+			{
+				size, err := m.ValidatorPubkeyList[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintNativeToken(dAtA, i, uint64(size))
+			}
 			i--
 			dAtA[i] = 0x1a
 		}
@@ -572,9 +752,14 @@ func (m *Staker) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = l
 	if len(m.ValidatorList) > 0 {
 		for iNdEx := len(m.ValidatorList) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.ValidatorList[iNdEx])
-			copy(dAtA[i:], m.ValidatorList[iNdEx])
-			i = encodeVarintNativeToken(dAtA, i, uint64(len(m.ValidatorList[iNdEx])))
+			{
+				size, err := m.ValidatorList[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintNativeToken(dAtA, i, uint64(size))
+			}
 			i--
 			dAtA[i] = 0x12
 		}
@@ -620,6 +805,121 @@ func (m *Balances) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			i--
 			dAtA[i] = 0xa
 		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ValidatorVersion) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ValidatorVersion) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ValidatorVersion) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Version != 0 {
+		i = encodeVarintNativeToken(dAtA, i, uint64(m.Version))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.ValidatorPubkey) > 0 {
+		i -= len(m.ValidatorPubkey)
+		copy(dAtA[i:], m.ValidatorPubkey)
+		i = encodeVarintNativeToken(dAtA, i, uint64(len(m.ValidatorPubkey)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *NSTVersion) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *NSTVersion) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *NSTVersion) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.FeedVersion != nil {
+		{
+			size, err := m.FeedVersion.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintNativeToken(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Version != nil {
+		{
+			size, err := m.Version.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintNativeToken(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *VersionDepositAmount) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VersionDepositAmount) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VersionDepositAmount) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.DepositAmount != 0 {
+		i = encodeVarintNativeToken(dAtA, i, uint64(m.DepositAmount))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.Version != 0 {
+		i = encodeVarintNativeToken(dAtA, i, uint64(m.Version))
+		i--
+		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -673,8 +973,8 @@ func (m *StakerInfo) Size() (n int) {
 		n += 1 + sovNativeToken(uint64(m.StakerIndex))
 	}
 	if len(m.ValidatorPubkeyList) > 0 {
-		for _, s := range m.ValidatorPubkeyList {
-			l = len(s)
+		for _, e := range m.ValidatorPubkeyList {
+			l = e.Size()
 			n += 1 + l + sovNativeToken(uint64(l))
 		}
 	}
@@ -712,8 +1012,8 @@ func (m *Staker) Size() (n int) {
 		n += 1 + sovNativeToken(uint64(m.StakerIndex))
 	}
 	if len(m.ValidatorList) > 0 {
-		for _, s := range m.ValidatorList {
-			l = len(s)
+		for _, e := range m.ValidatorList {
+			l = e.Size()
 			n += 1 + l + sovNativeToken(uint64(l))
 		}
 	}
@@ -731,6 +1031,54 @@ func (m *Balances) Size() (n int) {
 			l = e.Size()
 			n += 1 + l + sovNativeToken(uint64(l))
 		}
+	}
+	return n
+}
+
+func (m *ValidatorVersion) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.ValidatorPubkey)
+	if l > 0 {
+		n += 1 + l + sovNativeToken(uint64(l))
+	}
+	if m.Version != 0 {
+		n += 1 + sovNativeToken(uint64(m.Version))
+	}
+	return n
+}
+
+func (m *NSTVersion) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Version != nil {
+		l = m.Version.Size()
+		n += 1 + l + sovNativeToken(uint64(l))
+	}
+	if m.FeedVersion != nil {
+		l = m.FeedVersion.Size()
+		n += 1 + l + sovNativeToken(uint64(l))
+	}
+	return n
+}
+
+func (m *VersionDepositAmount) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Version != 0 {
+		n += 1 + sovNativeToken(uint64(m.Version))
+	}
+	if m.DepositAmount != 0 {
+		n += 1 + sovNativeToken(uint64(m.DepositAmount))
 	}
 	return n
 }
@@ -970,7 +1318,7 @@ func (m *StakerInfo) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ValidatorPubkeyList", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowNativeToken
@@ -980,23 +1328,25 @@ func (m *StakerInfo) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthNativeToken
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthNativeToken
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ValidatorPubkeyList = append(m.ValidatorPubkeyList, string(dAtA[iNdEx:postIndex]))
+			m.ValidatorPubkeyList = append(m.ValidatorPubkeyList, &ValidatorVersion{})
+			if err := m.ValidatorPubkeyList[len(m.ValidatorPubkeyList)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
@@ -1187,7 +1537,7 @@ func (m *Staker) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ValidatorList", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowNativeToken
@@ -1197,23 +1547,25 @@ func (m *Staker) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthNativeToken
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthNativeToken
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ValidatorList = append(m.ValidatorList, string(dAtA[iNdEx:postIndex]))
+			m.ValidatorList = append(m.ValidatorList, &ValidatorVersion{})
+			if err := m.ValidatorList[len(m.ValidatorList)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1299,6 +1651,317 @@ func (m *Balances) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipNativeToken(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthNativeToken
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ValidatorVersion) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowNativeToken
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ValidatorVersion: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ValidatorVersion: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ValidatorPubkey", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNativeToken
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthNativeToken
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthNativeToken
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ValidatorPubkey = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			m.Version = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNativeToken
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Version |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipNativeToken(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthNativeToken
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *NSTVersion) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowNativeToken
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: NSTVersion: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: NSTVersion: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNativeToken
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthNativeToken
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthNativeToken
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Version == nil {
+				m.Version = &VersionDepositAmount{}
+			}
+			if err := m.Version.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FeedVersion", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNativeToken
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthNativeToken
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthNativeToken
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.FeedVersion == nil {
+				m.FeedVersion = &VersionDepositAmount{}
+			}
+			if err := m.FeedVersion.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipNativeToken(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthNativeToken
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VersionDepositAmount) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowNativeToken
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VersionDepositAmount: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VersionDepositAmount: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			m.Version = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNativeToken
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Version |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DepositAmount", wireType)
+			}
+			m.DepositAmount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNativeToken
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.DepositAmount |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipNativeToken(dAtA[iNdEx:])
