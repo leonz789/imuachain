@@ -27,6 +27,8 @@ type ImuaMempool struct {
 	txDecoder sdk.TxDecoder
 }
 
+var _ mempool.Mempool = &ImuaMempool{}
+
 // Insert inserts a tx into mempool, currently only used for rawData from tx related to 2-phases aggregation of oracle modul
 func (em *ImuaMempool) Insert(_ context.Context, tx sdk.Tx) error {
 	// we don't filter tx not with message of rawData type, those tx will just be added into tendermint's txpool
@@ -85,7 +87,7 @@ func (em *ImuaMempool) Select(ctx context.Context, txList [][]byte) mempool.Iter
 			if err != nil {
 				continue
 			}
-			if _, _, isRawData, _ := utils.OracleCreatePriceTx(tx); isRawData {
+			if utils.IsOraclePhaseTwoTx(tx) {
 				// remove rawData from request txList if there's no feederID collecting rawData pieces
 				continue
 			}
@@ -108,7 +110,7 @@ func (em *ImuaMempool) Select(ctx context.Context, txList [][]byte) mempool.Iter
 			// skip undecodable bytes - they will be recehecked when re-broadcast
 			continue
 		}
-		msgs, _, isRawData, _ := utils.OracleCreatePriceTx(tx)
+		msgs, _, isRawData, _ := utils.IsValidOracleTx(tx)
 		if !isRawData {
 			// we don't need to check isOracle, it's already checked in anteHandler, and if some proposer filled in any invalid message it will be reject by anteHandler again in runTx
 			keep = append(keep, tx)
@@ -204,7 +206,7 @@ func (em *ImuaMempool) includesMsgOracle(tx sdk.Tx) bool {
 // GetPieceWithProof returns pieceWithProof and msgCreatePrice from tx
 func (em *ImuaMempool) GetPieceWithProof(tx sdk.Tx) (pieceWithProof *oracletypes.PieceWithProof, msgO *oracletypes.MsgCreatePrice, isOracle, isRawData bool) {
 	var msgs []*oracletypes.MsgCreatePrice
-	msgs, isOracle, isRawData, _ = utils.OracleCreatePriceTx(tx)
+	msgs, isOracle, isRawData, _ = utils.IsValidOracleTx(tx)
 	if !isRawData {
 		return
 	}
