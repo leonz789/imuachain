@@ -263,39 +263,6 @@ func OnlyLegacyAminoSigners(sigData signing.SignatureData) bool {
 }
 
 func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
-	if _, isOracle, _, _ := utils.IsValidOracleTx(tx); isOracle {
-		sigTx, ok := tx.(authsigning.SigVerifiableTx)
-		if !ok {
-			return ctx, sdkerrors.ErrTxDecode.Wrap("invalid transaction type, expected SigVerifiableTx")
-		}
-
-		// stdSigs contains the sequence number, account number, and signatures.
-		// When simulating, this would just be a 0-length slice.
-		sigs, err := sigTx.GetSignaturesV2()
-		if err != nil {
-			return ctx, err
-		}
-		pubKeys, err := sigTx.GetPubKeys()
-		if err != nil {
-			return ctx, err
-		}
-		for i, sig := range sigs {
-			pubKey := pubKeys[i]
-			// TODO: is it necessary to support multi-sign ?
-			data, ok := sig.Data.(*signing.SingleSignatureData)
-			if !ok {
-				return ctx, sdkerrors.ErrTxDecode.Wrap("invalid signature type, expected SignleSignatureData")
-			}
-			bytesToSign, err := svd.signModeHandler.GetSignBytes(data.SignMode, authsigning.SignerData{ChainID: ctx.ChainID()}, tx)
-			if err != nil {
-				return ctx, err
-			}
-			pubKey.VerifySignature(bytesToSign, data.Signature)
-		}
-
-		return next(ctx, tx, simulate)
-	}
-
 	sigTx, ok := tx.(authsigning.SigVerifiableTx)
 	if !ok {
 		return ctx, sdkerrors.ErrTxDecode.Wrap("invalid transaction type, expected SigVerifiableTx")
@@ -308,8 +275,32 @@ func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 		return ctx, err
 	}
 
-	signerAddrs := sigTx.GetSigners()
+	if _, isOracle, _, _ := utils.IsValidOracleTx(tx); isOracle {
+		pubKeys, err := sigTx.GetPubKeys()
+		if err != nil {
+			return ctx, err
+		}
 
+		for i, sig := range sigs {
+			pubKey := pubKeys[i]
+			// TODO: is it necessary to support multi-sign ?
+			data, ok := sig.Data.(*signing.SingleSignatureData)
+			if !ok {
+				return ctx, sdkerrors.ErrTxDecode.Wrap("invalid signature type, expected SignleSignatureData")
+			}
+			bytesToSign, err := svd.signModeHandler.GetSignBytes(data.SignMode, authsigning.SignerData{ChainID: ctx.ChainID()}, tx)
+			if err != nil {
+				return ctx, err
+			}
+
+			if !simulate && !pubKey.VerifySignature(bytesToSign, data.Signature) {
+				return ctx, sdkerrors.ErrUnauthorized.Wrap("signature verification failed")
+			}
+		}
+		return next(ctx, tx, simulate)
+	}
+
+	signerAddrs := sigTx.GetSigners()
 	// check that signer length and signature length are the same
 	if len(sigs) != len(signerAddrs) {
 		return ctx, sdkerrors.ErrUnauthorized.Wrapf("invalid number of signer;  expected: %d, got %d", len(signerAddrs), len(sigs))
