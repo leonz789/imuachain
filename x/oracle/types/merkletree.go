@@ -480,7 +480,6 @@ func merkleTreeFromBytes(pieceSize uint32, leafCount uint32, bytes []byte, fromR
 					// this should never happen
 					return nil, errors.New("liftedNode must be nil when do lifting")
 				}
-				// #nosec G115
 				break
 			}
 		}

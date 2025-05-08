@@ -197,7 +197,7 @@ func (f *FeederManager) ProcessRawData(ctx sdk.Context, msg *oracletypes.MsgCrea
 	if !r.m.Completed() {
 		r.cachedProofForBlock = append(r.cachedProofForBlock, cachedProof...)
 	}
-	// we don't do no state update in tx exexuting, the postHandler and all state update will be handled in EndBlock
+	// we don't do any state update in tx exexuting, the postHandler and all state update will be handled in EndBlock
 	//		// post handle rawData registered for the feederID
 	//		// clear all caching pieces from stateDB
 	//		// remove/reset merkleTree
