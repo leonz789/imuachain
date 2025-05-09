@@ -244,6 +244,12 @@ func (f *FeederManager) updateAndCommitCaches(ctx sdk.Context) (activeValidators
 	_, vUpdated, pUpdated := f.cs.Commit(ctx, false)
 	if vUpdated || pUpdated {
 		f.k.Logger(ctx).Info("update caches", "validatorUpdated", vUpdated, "paramsUpdated", pUpdated)
+		if pUpdated {
+			ctx.EventManager().EmitEvent(sdk.NewEvent(
+				oracletypes.EventTypeCreatePrice,
+				sdk.NewAttribute(oracletypes.AttributeKeyParamsUpdated, oracletypes.AttributeValueParamsUpdatedSuccess),
+			))
+		}
 	}
 	return activeValidators
 }

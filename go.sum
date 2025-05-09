@@ -1162,8 +1162,8 @@ github.com/imua-xyz/cosmos-sdk v0.47.5-evmos.2.0.20250312095401-0035968c59f0 h1:
 github.com/imua-xyz/cosmos-sdk v0.47.5-evmos.2.0.20250312095401-0035968c59f0/go.mod h1:EHwCeN9IXonsjKcjpS12MqeStdZvIdxt3VYXhus3G3c=
 github.com/imua-xyz/evmos/v16 v16.0.3-0.20250428082709-46118f23fed5 h1:6OF9Al2Jm7OwuRMCCuBHSLphjj7uxFExyUIJm3rxpxo=
 github.com/imua-xyz/evmos/v16 v16.0.3-0.20250428082709-46118f23fed5/go.mod h1:aPzVlrI2p5Jb0tETC15f4CVRYwzChGy+Wp6SebGc6tE=
-github.com/imua-xyz/price-feeder v0.2.4 h1:iu6eu4eqbVIWMDCbuYp6Q3Flu0mPrK+//Ay0gwlkZZY=
-github.com/imua-xyz/price-feeder v0.2.4/go.mod h1:3/nqmvTHMCoP0IttoFMyhRZ1zdkSR+Uz+4CZnCxuR1g=
+github.com/imua-xyz/price-feeder v0.2.5 h1:n4uqIRKyJ+m9W5DJilriVchiGY2upkh67Yu02uEO5tg=
+github.com/imua-xyz/price-feeder v0.2.5/go.mod h1:3/nqmvTHMCoP0IttoFMyhRZ1zdkSR+Uz+4CZnCxuR1g=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
