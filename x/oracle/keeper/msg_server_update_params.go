@@ -84,6 +84,7 @@ func (ms msgServer) UpdateParams(goCtx context.Context, msg *types.MsgUpdatePara
 	// set updated new params
 	ms.SetParams(ctx, p)
 	if !ctx.IsCheckTx() {
+		// mark params updated for memory cache
 		ms.SetParamsUpdated()
 	}
 	return &types.MsgUpdateParamsResponse{}, nil

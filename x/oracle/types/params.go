@@ -247,8 +247,10 @@ func (p Params) Validate() error {
 
 // AddSources adds new sources to tell where to fetch prices
 func (p Params) AddSources(sources ...*Source) (Params, error) {
+	if len(sources) == 0 {
+		return p, ErrNoOp
+	}
 	sNames := make(map[string]struct{})
-	var err error = ErrNoOp
 	for _, source := range p.Sources {
 		sNames[source.Name] = struct{}{}
 	}
@@ -261,15 +263,16 @@ func (p Params) AddSources(sources ...*Source) (Params, error) {
 		}
 		sNames[s.Name] = struct{}{}
 		p.Sources = append(p.Sources, s)
-		err = nil
 	}
-	return p, err
+	return p, nil
 }
 
 // AddChains adds new chains on which tokens are deployed
 func (p Params) AddChains(chains ...*Chain) (Params, error) {
+	if len(chains) == 0 {
+		return p, ErrNoOp
+	}
 	cNames := make(map[string]struct{})
-	var err error = ErrNoOp
 	for _, chain := range p.Chains {
 		cNames[chain.Name] = struct{}{}
 	}
@@ -278,9 +281,8 @@ func (p Params) AddChains(chains ...*Chain) (Params, error) {
 			return p, ErrInvalidParams.Wrap("invalid chain to add, duplicated")
 		}
 		p.Chains = append(p.Chains, c)
-		err = nil
 	}
-	return p, err
+	return p, nil
 }
 
 // UpdateTokens upates token info
@@ -288,7 +290,9 @@ func (p Params) AddChains(chains ...*Chain) (Params, error) {
 // contractAddress and decimal are only allowed before any tokenFeeder of that token had been started
 // assetID is allowed to be modified no matter any tokenFeeder is started
 func (p Params) UpdateTokens(currentHeight uint64, tokens ...*Token) (Params, error) {
-	var err error
+	if len(tokens) == 0 {
+		return p, ErrNoOp
+	}
 	for _, t := range tokens {
 		update := false
 		for tokenID := 1; tokenID < len(p.Tokens); tokenID++ {
@@ -317,7 +321,6 @@ func (p Params) UpdateTokens(currentHeight uint64, tokens ...*Token) (Params, er
 				if !update {
 					return p, ErrInvalidParams.Wrap("invalid token to update, no valid field set")
 				}
-				err = nil
 				// any other modification will be ignored
 				break
 			}
@@ -325,10 +328,9 @@ func (p Params) UpdateTokens(currentHeight uint64, tokens ...*Token) (Params, er
 		// add a new token
 		if !update {
 			p.Tokens = append(p.Tokens, t)
-			err = nil
 		}
 	}
-	return p, err
+	return p, nil
 }
 
 // TokenStarted returns if any tokenFeeder had been started for the specified token identified by tokenID
@@ -354,19 +356,24 @@ func (p Params) AddRules(rules ...*RuleSource) (Params, error) {
 }
 
 func (p Params) UpdateMaxPriceCount(count int32) (Params, error) {
+	if count == 0 {
+		return p, ErrNoOp
+	}
 	if count < 0 {
 		return p, ErrInvalidParams.Wrap("invalid maxPriceCount")
 	}
-	var err error = ErrNoOp
-	if count > 0 && count != p.MaxSizePrices {
-		p.MaxSizePrices = count
-		err = nil
+	if count == p.MaxSizePrices {
+		return p, ErrInvalidParams.Wrap("invalid maxPriceCount, no valid field set")
 	}
-	return p, err
+	p.MaxSizePrices = count
+	return p, nil
 }
 
 // UpdateTokenFeeder updates tokenfeeder info, validation first
 func (p Params) UpdateTokenFeeder(tf *TokenFeeder, currentHeight uint64) (Params, error) {
+	if tf == nil {
+		return p, ErrNoOp
+	}
 	tfIDs := p.GetFeederIDsByTokenID(tf.TokenID)
 	if len(tfIDs) == 0 {
 		// first tokenfeeder for this token
