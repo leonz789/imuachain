@@ -321,6 +321,9 @@ func (m *MerkleTree) RootIndex() uint32 {
 	return m.rootIndex
 }
 
+// GetCopy return a copy of the MerkleTree
+// NOTE: the returned MerkleTree is not a deep copy, the hash of each node is copied, but the pieces and rawData, path are not copied
+// for the shallow copies, the outter slice/map is copied, but the inner slice/map is not copied
 func (m *MerkleTree) GetCopy() *MerkleTree {
 	if m == nil {
 		return nil

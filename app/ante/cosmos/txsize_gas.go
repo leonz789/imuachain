@@ -41,12 +41,12 @@ func (cgts ConsumeTxSizeGasDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, sim
 	if _, isOracle, isRawData, _ := anteutils.IsValidOracleTx(tx); isOracle {
 		if isRawData {
 			if len(ctx.TxBytes()) > anteutils.TxSizeLimitOracleRawData {
-				return ctx, sdkerrors.ErrTxTooLarge.Wrapf("oracle create-price tx exceeds size limit, limit:%d, got:%d", anteutils.TxSizeLimitOracleRawData, len(ctx.TxBytes()))
+				return ctx, sdkerrors.ErrTxTooLarge.Wrapf("oracle create-price tx with rawData exceeds size limit, limit:%d, got:%d", anteutils.TxSizeLimitOracleRawData, len(ctx.TxBytes()))
 			}
 			return next(ctx, tx, simulate)
 		}
 		if len(ctx.TxBytes()) > anteutils.TxSizeLimitOraclePrice {
-			return ctx, sdkerrors.ErrTxTooLarge.Wrapf("oracle create-price tx with rawdata exceeds size limit, limit:%d, got:%d", anteutils.TxSizeLimitOraclePrice, len(ctx.TxBytes()))
+			return ctx, sdkerrors.ErrTxTooLarge.Wrapf("oracle create-price tx exceeds size limit, limit:%d, got:%d", anteutils.TxSizeLimitOraclePrice, len(ctx.TxBytes()))
 		}
 		return next(ctx, tx, simulate)
 	}
