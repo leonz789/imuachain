@@ -310,6 +310,19 @@ func (f *FeederManager) commitRounds(ctx sdk.Context) {
 				logger.Info("commit round with price from previous", "feederID", r.feederID, "roundID", r.roundID, "baseBlock", r.roundBaseBlock, "height", height)
 				// #nosec G115  // tokenID is index of slice
 				f.k.GrowRoundID(ctx, uint64(r.tokenID), uint64(r.roundID))
+				// if there's is no success price aggregated, the feed version is updated
+				// otherwise, the feed version will be updated after the 2nd phase aggregation
+				if r.twoPhases {
+					// update nst feed version and emit event
+					feedVersion, updated := f.k.UpdateNSTFeedVersion(ctx, uint64(r.feederID))
+					if updated {
+						ctx.EventManager().EmitEvent(sdk.NewEvent(
+							oracletypes.EventTypeCreatePrice,
+							sdk.NewAttribute(oracletypes.AttributeKeyNSTVersionUpdate, oracletypes.AttributeValueTrue),
+							sdk.NewAttribute(oracletypes.AttributeKeyNSTFeedVersion, fmt.Sprintf("%d_%d", r.feederID, feedVersion)),
+						))
+					}
+				}
 			} else {
 				if f.cs.IsRuleV1(r.feederID) {
 					priceCommit := finalPrice.ProtoPriceTimeRound(r.roundID, ctx.BlockTime().Format(oracletypes.TimeLayout))
