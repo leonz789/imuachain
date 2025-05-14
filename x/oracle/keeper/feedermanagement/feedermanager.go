@@ -331,6 +331,26 @@ func (f *FeederManager) processRound(ctx sdk.Context, feederID, height int64, lo
 				"feederID", r.feederID, "roundID", r.roundID, "baseBlock", r.roundBaseBlock, "height", height)
 			// #nosec G115  // tokenID is index of slice
 			f.k.GrowRoundID(ctx, uint64(r.tokenID), uint64(r.roundID))
+			// if there's is no success price aggregated, the feed version is updated
+			// otherwise, the feed version will be updated after the 2nd phase aggregation
+			if r.twoPhases {
+				// update nst feed version and emit event
+				// #nosec G115
+				nstChainID, found := f.GetNSTChainIDFromFeederID(uint64(r.feederID))
+				if found {
+					feedVersion, updated := f.k.UpdateNSTFeedVersion(ctx, nstChainID)
+					if updated {
+						logger.Info("update nst feed version", "feederID", r.feederID, "updated feedVersion", feedVersion)
+						ctx.EventManager().EmitEvent(sdk.NewEvent(
+							oracletypes.EventTypeCreatePrice,
+							sdk.NewAttribute(oracletypes.AttributeKeyNSTVersionUpdate, oracletypes.AttributeValueTrue),
+							sdk.NewAttribute(oracletypes.AttributeKeyNSTFeedVersion, fmt.Sprintf("%d_%d", r.feederID, feedVersion)),
+						))
+					}
+				} else {
+					logger.Error("failed to get nstChainID from feederID", "feederID", r.feederID)
+				}
+			}
 			return success
 		}
 		priceCommit := finalPrice.ProtoPriceTimeRound(r.roundID, ctx.BlockTime().Format(oracletypes.TimeLayout))
@@ -1223,6 +1243,10 @@ func (f *FeederManager) LatestRoundBaseBlock(feederID uint64) (uint64, bool) {
 
 func (f *FeederManager) GetNSTFeederIDFromClientChainID(clientChainID uint64) (uint64, bool) {
 	return f.cs.GetNSTFeederIDFromClientChainID(clientChainID)
+}
+
+func (f *FeederManager) GetNSTChainIDFromFeederID(feederID uint64) (uint64, bool) {
+	return f.cs.GetNSTChainIDFromFeederID(feederID)
 }
 
 // getRecoveryStartPoint returns the height to start the recovery process

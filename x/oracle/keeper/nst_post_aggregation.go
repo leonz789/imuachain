@@ -407,6 +407,25 @@ func (k Keeper) GetNSTVersions(ctx sdk.Context, chainID uint64) (types.NSTVersio
 	return v, true
 }
 
+func (k Keeper) UpdateNSTFeedVersion(ctx sdk.Context, chainID uint64) (uint64, bool) {
+	store := ctx.KVStore(k.storeKey)
+	key := types.NSTVersionKey(chainID)
+	value := store.Get(key)
+	var v types.NSTVersion
+	if value == nil {
+		return 0, false
+	}
+	k.cdc.MustUnmarshal(value, &v)
+	if v.FeedVersion.Version >= v.Version.Version {
+		return v.FeedVersion.Version, false
+	}
+	v.FeedVersion.Version = v.Version.Version
+	v.FeedVersion.DepositAmount = v.Version.DepositAmount
+	bz := k.cdc.MustMarshal(&v)
+	store.Set(key, bz)
+	return v.FeedVersion.Version, true
+}
+
 func (k Keeper) IncreaseVersionByDeposit(ctx sdk.Context, chainID, amountAdd uint64) uint64 {
 	store := ctx.KVStore(k.storeKey)
 	key := types.NSTVersionKey(chainID)
