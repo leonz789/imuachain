@@ -205,7 +205,6 @@ func (f *FeederManager) prepareRounds(ctx sdk.Context) []int64 {
 // 2. update and commit validatorPowers if updated
 // forceSeal: 1. params has some modifications related to quoting. 2.validatorSet changed
 // resetSlashing: params has some modifications related to oracle_slashing
-// func (f *FeederManager) updateAndCommitCaches(ctx sdk.Context) (forceSeal, resetSlashing bool, prevValidators, addedValidators []string) {
 func (f *FeederManager) updateAndCommitCaches(ctx sdk.Context) (activeValidators []string) {
 	// update params in caches
 	if f.paramsUpdated {
@@ -244,6 +243,12 @@ func (f *FeederManager) updateAndCommitCaches(ctx sdk.Context) (activeValidators
 	_, vUpdated, pUpdated := f.cs.Commit(ctx, false)
 	if vUpdated || pUpdated {
 		f.k.Logger(ctx).Info("update caches", "validatorUpdated", vUpdated, "paramsUpdated", pUpdated)
+		if pUpdated {
+			ctx.EventManager().EmitEvent(sdk.NewEvent(
+				oracletypes.EventTypeOracleUpdateParams,
+				sdk.NewAttribute(oracletypes.AttributeKeyParamsUpdated, oracletypes.AttributeValueParamsUpdatedSuccess),
+			))
+		}
 	}
 	return activeValidators
 }

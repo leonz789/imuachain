@@ -1,9 +1,10 @@
 package types
 
 const (
-	EventTypeCreatePrice    = "create_price"
-	EventTypeOracleLiveness = "oracle_liveness"
-	EventTypeOracleSlash    = "oracle_slash"
+	EventTypeCreatePrice        = "create_price"
+	EventTypeOracleLiveness     = "oracle_liveness"
+	EventTypeOracleSlash        = "oracle_slash"
+	EventTypeOracleUpdateParams = "oracle_update_params"
 
 	AttributeKeyFeederID          = "feeder_id"
 	AttributeKeyTokenID           = "token_id"
