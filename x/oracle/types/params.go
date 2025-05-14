@@ -546,7 +546,6 @@ func (p Params) GetAssetIDForNSTFromFeederID(feederID uint64) (string, string) {
 	if feederID >= uint64(len(p.TokenFeeders)) {
 		return "", ""
 	}
-
 	tokenID := p.TokenFeeders[feederID].TokenID
 	if tokenID >= uint64(len(p.Tokens)) {
 		return "", ""
