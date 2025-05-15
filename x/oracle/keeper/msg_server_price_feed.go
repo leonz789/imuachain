@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"strconv"
 	"strings"
 	"time"
@@ -32,14 +33,27 @@ func (ms msgServer) CreatePrice(goCtx context.Context, msg *types.MsgCreatePrice
 	logger := ms.Logger(ctx)
 
 	validator, _ := types.ConsAddrStrFromCreator(msg.Creator)
-	logQuote := []interface{}{"feederID", msg.FeederID, "baseBlock", msg.BasedBlock, "proposer", validator, "msg-nonce", msg.Nonce, "height", ctx.BlockHeight()}
+	logQuote := []any{"feederID", msg.FeederID, "baseBlock", msg.BasedBlock, "proposer", validator, "msg-nonce", msg.Nonce, "height", ctx.BlockHeight()}
 
 	if err := checkTimestamp(ctx, msg); err != nil {
 		logger.Error("quote has invalid timestamp", append(logQuote, "error", err)...)
 		return nil, types.ErrPriceProposalFormatInvalid.Wrap(err.Error())
 	}
 
-	// core logic and functionality of Price Aggregation
+	// goto rawData process which needs no 'aggragation', we just verify the provided piece with recorded root which got consensus
+	if msg.IsPhaseTwo() {
+		cachedRawData, err := ms.ProcessRawData(ctx, msg, ctx.IsCheckTx())
+		if err == nil {
+			logger.Info("quote of 2nd-phase added rawData piece", append(logQuote, "rootHash", hex.EncodeToString(cachedRawData), "piece-index", msg.Prices[0].Prices[0].DetID)...)
+			return &types.MsgCreatePriceResponse{}, nil
+		}
+		logger.Error("quote of 2nd-phase for rawData piece failed", append(logQuote, "error", err)...)
+		return nil, err
+	}
+
+	// core logic and functionality of Price Aggregation for 1st phase including
+	// - price data
+	// - hash for big data
 	finalPrice, err := ms.ProcessQuote(ctx, msg, ctx.IsCheckTx())
 	if err != nil {
 		if sdkerrors.IsOf(err, types.ErrQuoteRecorded) {
@@ -52,7 +66,7 @@ func (ms msgServer) CreatePrice(goCtx context.Context, msg *types.MsgCreatePrice
 		return nil, err
 	}
 
-	logger.Info("added quote for aggregation", append(logQuote, "msg", msg)...)
+	logger.Info("added quote for aggregation", append(logQuote, "msg", msg, "isCheckTx", ctx.IsCheckTx())...)
 	// TODO: use another type
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeCreatePrice,

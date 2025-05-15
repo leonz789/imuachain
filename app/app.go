@@ -105,7 +105,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/streaming"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/mempool"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/version"
 	srvflags "github.com/evmos/evmos/v16/server/flags"
@@ -394,14 +393,15 @@ func NewImuachainApp(
 
 	eip712.SetEncodingConfig(encodingConfig)
 
+	oKeeper := &oracleKeeper.Keeper{}
 	// Setup Mempool and Proposal Handlers
 	baseAppOptions = append(baseAppOptions, func(app *baseapp.BaseApp) {
-		// NOTE: we use a NoOpMempool here, for oracle create-price, it works fine since we have set a infinitgasmeterwithlimit in the ante handler to avoid the out-of-gas error no matter what the amount/gas is set by tx builder, and we set the highest priority for oracle create-price txs to work properly with tendermint mempool to make sure oracle creat-prie tx will be included in the mempool if received. And if we want to use some other application mempool, we need to take care of the gas limit and gas price in the oracle create-price txs.(we don't need to bother this since tendermint mempool use gasMeter.limit() instead of tx.Gas())
-		mempool := mempool.NoOpMempool{}
+		mempool := NewImuaMempool(oKeeper, encodingConfig.TxConfig.TxDecoder())
 		app.SetMempool(mempool)
 		handler := baseapp.NewDefaultProposalHandler(mempool, app)
 		app.SetPrepareProposal(handler.PrepareProposalHandler())
 		app.SetProcessProposal(handler.ProcessProposalHandler())
+		app.SetTxEncoder(encodingConfig.TxConfig.TxEncoder())
 	})
 	// NOTE we use custom transaction decoder that supports the sdk.Tx interface instead of
 	// sdk.StdTx
@@ -588,6 +588,9 @@ func NewImuachainApp(
 		&app.DelegationKeeper, &app.AssetsKeeper, authAddrString,
 		&app.SlashingKeeper,
 	)
+
+	// set OracleKeeper for mempool
+	*oKeeper = app.OracleKeeper
 
 	// the SDK slashing module is used to slash validators in the case of downtime. it tracks
 	// the validator signature rate and informs the staking keeper to perform the requisite
