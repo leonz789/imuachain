@@ -71,7 +71,7 @@ func (msg *MsgCreatePrice) ValidateBasic() error {
 	return nil
 }
 
-func (msg *MsgCreatePrice) IsNotTwoPhases() bool {
+func (msg *MsgCreatePrice) IsSinglePhase() bool {
 	return msg.Phase == AggregationPhaseUnspecified
 }
 

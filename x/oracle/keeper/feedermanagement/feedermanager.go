@@ -805,7 +805,7 @@ func (f *FeederManager) validateMsg(ctx sdk.Context, msg *oracletypes.MsgCreateP
 		}
 	}
 
-	if f.cs.IsRule2PhasesByFeederID(msg.FeederID) && msg.IsNotTwoPhases() {
+	if f.cs.IsRule2PhasesByFeederID(msg.FeederID) && msg.IsSinglePhase() {
 		return nil, fmt.Errorf("feederID:%d is configured for 2-phases aggregation, but the message is not of 2-phases", msg.FeederID)
 	}
 	// extra check for message as 1st phase for 2-phases aggregation
@@ -855,13 +855,13 @@ func (f *FeederManager) validateMsg(ctx sdk.Context, msg *oracletypes.MsgCreateP
 	}
 
 	// #nosec -G115
-	if valid := r.ValidQuotingBaseBlock(int64(msg.BasedBlock), msg.IsNotTwoPhases()); !valid {
+	if valid := r.ValidQuotingBaseBlock(int64(msg.BasedBlock), msg.IsSinglePhase()); !valid {
 		return nil, fmt.Errorf("failed to process price-feed msg for feederID:%d, round is quoting:%t,quotingWindow is open:%t, expected baseBlock:%d, got baseBlock:%d, currentHeight:%d", msg.FeederID, r.IsQuoting(), r.IsQuotingWindowOpen(), r.roundBaseBlock, msg.BasedBlock, ctx.BlockHeight())
 	}
 
-	if r.twoPhases == msg.IsNotTwoPhases() {
+	if r.twoPhases == msg.IsSinglePhase() {
 		// this should not happen, since message itself had been checked in 'validateMsg', when came to here it means there' something wrong with mem-round initialization, feederID:%d, r.IsTwoPhases:%t, msg.IsTwoPhases:%t", msg.FeederID, r.twoPhases, !msg.IsNotTwoPhases())
-		return nil, fmt.Errorf("the 2phases status of round and message is mismatched, there's something wrong with mem-round initialization, feederID:%d, r.IsTwoPhases:%t, msg.IsTwoPhases:%t", msg.FeederID, r.twoPhases, !msg.IsNotTwoPhases())
+		return nil, fmt.Errorf("the 2phases status of round and message is mismatched, there's something wrong with mem-round initialization, feederID:%d, r.IsTwoPhases:%t, msg.IsTwoPhases:%t", msg.FeederID, r.twoPhases, !msg.IsSinglePhase())
 	}
 
 	if msg.IsPhaseTwo() && (r.m == nil || r.m.Completed()) {

@@ -107,7 +107,7 @@ func (em *ImuaMempool) Select(ctx context.Context, txList [][]byte) mempool.Iter
 	for _, txBytes := range txList {
 		tx, err := em.txDecoder(txBytes)
 		if err != nil {
-			// skip undecodable bytes - they will be recehecked when re-broadcast
+			// skip undecoded bytes - they will be rechecked when re-broadcast
 			continue
 		}
 		msgs, _, isRawData, _ := utils.IsValidOracleTx(tx)
