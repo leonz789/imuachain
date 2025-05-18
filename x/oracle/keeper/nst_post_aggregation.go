@@ -352,8 +352,8 @@ func UpdateNSTBalanceChange(ctx sdk.Context, rootHash []byte, rawData []byte, fe
 		return err
 	}
 
-	store := ctx.KVStore(k.storeKey)
 	cc, writeCache := ctx.CacheContext()
+	store := cc.KVStore(k.storeKey)
 	for _, changeKV := range balanceChanges.NstBalanceChanges {
 		stakerAddr := sl.StakerAddrs[changeKV.StakerIndex]
 		key := types.NativeTokenStakerKey(assetID, stakerAddr)
@@ -375,10 +375,20 @@ func UpdateNSTBalanceChange(ctx sdk.Context, rootHash []byte, rawData []byte, fe
 		newBalance.RoundID = roundID
 		balance := changeKV.Balance
 
-		// we expect price-feeder send only changed balance, so this should always be true if validators follow that rule
-		if delta := balance - newBalance.Balance; delta != 0 {
+		delta := uint64(0)
+		negative := true
+		if balance > newBalance.Balance {
+			delta = balance - newBalance.Balance
+			negative = false
+		} else if balance < newBalance.Balance {
+			delta = newBalance.Balance - balance
+		}
+		if delta != 0 {
 			amountChange := sdkmath.NewIntFromUint64(delta)
 			amountChange = amountChange.Mul(sdkmath.NewIntWithDecimal(1, decimal))
+			if negative {
+				amountChange = amountChange.Neg()
+			}
 
 			if err := k.delegationKeeper.UpdateNSTBalance(cc, getStakerID(stakerAddr, chainID), assetID, amountChange); err != nil {
 				return err
