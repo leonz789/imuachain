@@ -49,6 +49,8 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
+require github.com/imua-xyz/price-feeder v0.2.7
+
 require (
 	github.com/alitto/pond v1.8.3 // indirect
 	github.com/crypto-org-chain/cronos/memiavl v0.0.5-0.20231027074119-c05c9c61c90e // indirect
@@ -58,6 +60,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/ledgerwatch/erigon-lib v0.0.0-20230210071639-db0e7ed11263 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
+	go.uber.org/zap v1.27.0 // indirect
 )
 
 require (
@@ -279,8 +282,6 @@ replace (
 	github.com/evmos/evmos/v16 => github.com/imua-xyz/evmos/v16 v16.0.3-0.20250515032007-e21b41cb9b20
 	// Security Advisory https://github.com/advisories/GHSA-h395-qcrw-5vmq
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.9.1
-
-	github.com/imua-xyz/price-feeder v0.2.4 => github.com/leonz789/price-feeder v0.0.0-20250324080635-8013c8814e71
 
 	// replace broken goleveldb
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
