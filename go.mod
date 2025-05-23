@@ -49,8 +49,6 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
-require github.com/imua-xyz/price-feeder v0.2.7
-
 require (
 	github.com/alitto/pond v1.8.3 // indirect
 	github.com/crypto-org-chain/cronos/memiavl v0.0.5-0.20231027074119-c05c9c61c90e // indirect
@@ -60,7 +58,6 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/ledgerwatch/erigon-lib v0.0.0-20230210071639-db0e7ed11263 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
-	go.uber.org/zap v1.27.0 // indirect
 )
 
 require (
