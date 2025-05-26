@@ -249,7 +249,7 @@ if [[ $overwrite == "y" || $overwrite == "Y" ]]; then
 	jq '.app_state["oracle"]["params"]["token_feeders"][2]["token_id"]="2"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 	jq '.app_state["oracle"]["params"]["token_feeders"][2]["rule_id"]="3"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 	jq '.app_state["oracle"]["params"]["token_feeders"][2]["start_round_id"]="1"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-	jq '.app_state["oracle"]["params"]["token_feeders"][2]["start_base_block"]="20"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+	jq '.app_state["oracle"]["params"]["token_feeders"][2]["start_base_block"]="10"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 	jq '.app_state["oracle"]["params"]["token_feeders"][2]["interval"]="10"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 	jq '.app_state["oracle"]["params"]["token_feeders"][2]["end_block"]="0"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 	jq '.app_state["oracle"]["params"]["piece_size_byte"]="32"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
@@ -269,8 +269,8 @@ if [[ $overwrite == "y" || $overwrite == "Y" ]]; then
 	oracle_env_chainlink_content=$(
 		cat <<EOF
 urls:
-  mainnet: !!str https://rpc.ankr.com/eth
-  sepolia: !!str https://rpc.ankr.com/eth_sepolia
+  mainnet: !!str https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}
+  sepolia: !!str https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}
 tokens:
   ETHUSDT: 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419_mainnet
   AAVEUSDT: 0x547a514d5e3769680Ce22B2361c10Ea13619e8a9_mainnet
@@ -312,8 +312,9 @@ EOF
 	# generate oracle_env_beaconchain.yaml
 	oracle_env_beaconchain_content=$(
 		cat <<EOF
-url:
-  !!str https://ethereum-holesky-rpc.publicnode.com
+urls:
+  beaconchain: !!str https://ethereum-holesky-rpc.publicnode.com
+  eth: !!str https://eth-holesky.g.alchemy.com/v2/${ALCHEMY_API_KEY}
 nstid:
   !!str 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee_0x65
 EOF
@@ -408,4 +409,8 @@ EOF
 fi
 
 # Start the node (remove the --pruning=nothing flag if historical queries are not needed)
-imuad start --metrics "$TRACE" --log_level $LOGLEVEL --minimum-gas-prices=0.0001hua --json-rpc.api eth,txpool,personal,net,debug,web3 --api.enable --json-rpc.enable true --oracle --home "$HOMEDIR" --chain-id "$CHAINID" --grpc.enable true
+# imuad start --metrics "$TRACE" --log_level $LOGLEVEL --minimum-gas-prices=0.0001hua --json-rpc.api eth,txpool,personal,net,debug,web3 --api.enable --json-rpc.enable true --home "$HOMEDIR" --chain-id "$CHAINID" --grpc.enable true --oracle
+imuad start --metrics "$TRACE" --log_level $LOGLEVEL --minimum-gas-prices=0.0001hua --json-rpc.api eth,txpool,personal,net,debug,web3 --api.enable --json-rpc.enable true --home "$HOMEDIR" --chain-id "$CHAINID" --grpc.enable true --oracle --feeder_log_path "$HOMEDIR/logs"
+
+# imuad start --metrics "$TRACE" --log_level $LOGLEVEL --minimum-gas-prices=0.0001hua --json-rpc.api eth,txpool,personal,net,debug,web3 --api.enable --json-rpc.enable true --home "$HOMEDIR" --chain-id "$CHAINID" --grpc.enable true --oracle --feeder_bin /Users/linqing/workplace/github.com/leonz/imua-xyz/price-feeder/build/price-feeder
+# imuad start --metrics "$TRACE" --log_level $LOGLEVEL --minimum-gas-prices=0.0001hua --json-rpc.api eth,txpool,personal,net,debug,web3 --api.enable --json-rpc.enable true --home "$HOMEDIR" --chain-id "$CHAINID" --grpc.enable true --oracle --feeder_bin /Users/linqing/workplace/github.com/leonz/imua-xyz/price-feeder/build/price-feeder --feeder_log_path "$HOMEDIR/logs"
