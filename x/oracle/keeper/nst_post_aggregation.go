@@ -211,6 +211,9 @@ func (k Keeper) getStakerListNoCache(ctx sdk.Context, assetID string, chainID ui
 			return types.StakerList{}
 		}
 		_, chainID, _ = assetstypes.ParseID(assetID)
+		if chainID == 0 {
+			return types.StakerList{}
+		}
 	}
 	store := ctx.KVStore(k.storeKey)
 	keyStakerAddrPrefix := types.NSTStakerAddrKeyChainIDPrefix(chainID)
@@ -238,10 +241,13 @@ func (k Keeper) GetStakerList(ctx sdk.Context, assetID string, chainID uint64) t
 			return types.StakerList{}
 		}
 		_, chainID, _ = assetstypes.ParseID(assetID)
-		if sl := k.c.GetNSTStakerList(chainID); sl != nil {
-			return types.StakerList{
-				StakerAddrs: sl,
-			}
+		if chainID == 0 {
+			return types.StakerList{}
+		}
+	}
+	if sl := k.c.GetNSTStakerList(chainID); sl != nil {
+		return types.StakerList{
+			StakerAddrs: sl,
 		}
 	}
 	stakerList := k.getStakerListNoCache(ctx, assetID, chainID)
@@ -334,7 +340,6 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance, feedVer
 	}
 
 	balanceAtFeedVersion, latestBalance, latestVersion := stakerInfo.GetBalanceAtVersion(feedVersion)
-
 	store := ctx.KVStore(k.storeKey)
 	// if latestVersion > feedVersion, it means that there are new dposits after the last feed
 	if action == types.Action_ACTION_SLASH_REFUND && balance == 0 && latestVersion <= feedVersion {
@@ -538,7 +543,7 @@ func (k Keeper) SetStaker(ctx sdk.Context, chainID uint64, stakerAddr string, st
 func (k Keeper) removeStakerIndexes(ctx sdk.Context, chainID uint64, removedIndexes []uint32) error {
 	updatedStakers, err := k.c.RotateStakerList(chainID, removedIndexes)
 	if err != nil {
-		// TODO: do we refresh the cache here ?
+		k.refreshCachedStakerList(ctx, chainID)
 		return fmt.Errorf("failed to rotate stakerList")
 	}
 	l := len(updatedStakers)
@@ -561,18 +566,34 @@ func (k Keeper) removeStakerIndexes(ctx sdk.Context, chainID uint64, removedInde
 			latestStakerIndex -= uint32(l)
 			store.Set(keyLatestStakerIndex, types.Uint32Bytes(latestStakerIndex))
 		}
-		for index, stakerAddr := range updatedStakers {
-			keyStaker := types.NSTStakerKey(chainID, stakerAddr)
-			staker := types.Staker{}
-			bz := store.Get(keyStaker)
-			if bz == nil {
-				return fmt.Errorf("staker %s not found when rotate index for removed stakers", stakerAddr)
+		if len(updatedStakers) > 0 {
+			deleted := map[uint32]bool{}
+			for index, stakerAddr := range updatedStakers {
+				keyStaker := types.NSTStakerKey(chainID, stakerAddr)
+				staker := types.Staker{}
+				bz := store.Get(keyStaker)
+				if bz == nil {
+					k.refreshCachedStakerList(ctx, chainID)
+					return fmt.Errorf("staker %s not found when rotate index for removed stakers", stakerAddr)
+				}
+				k.cdc.MustUnmarshal(bz, &staker)
+
+				keyStakerAddr := types.NSTStakerAddrKey(chainID, staker.StakerIndex)
+				store.Delete(keyStakerAddr)
+				deleted[staker.StakerIndex] = true
+
+				staker.StakerIndex = index
+				store.Set(keyStaker, k.cdc.MustMarshal(&staker))
+
+				keyStakerAddr = types.NSTStakerAddrKey(chainID, index)
+				store.Set(keyStakerAddr, []byte(stakerAddr))
 			}
-			k.cdc.MustUnmarshal(bz, &staker)
-			staker.StakerIndex = index
-			store.Set(keyStaker, k.cdc.MustMarshal(&staker))
-			keyStakerAddr := types.NSTStakerAddrKey(chainID, index)
-			store.Set(keyStakerAddr, []byte(stakerAddr))
+			for _, removedIndex := range removedIndexes {
+				if _, ok := updatedStakers[removedIndex]; !ok && !deleted[removedIndex] {
+					keyStakerAddr := types.NSTStakerAddrKey(chainID, removedIndex)
+					store.Delete(keyStakerAddr)
+				}
+			}
 		}
 	}
 	return nil
@@ -669,13 +690,6 @@ func UpdateNSTBalanceChange(ctx sdk.Context, rootHash []byte, rawData []byte, fe
 		return errors.New("staker list is empty")
 	}
 
-	// fill staker list cache
-	if len(k.c.GetNSTStakerList(chainID)) == 0 {
-		sl := k.getStakerListNoCache(ctx, "", chainID)
-		if len(sl.StakerAddrs) > 0 {
-			k.c.SetNSTStakerList(chainID, sl.StakerAddrs)
-		}
-	}
 	cc, writeCache := ctx.CacheContext()
 	removedIndexes := make([]uint32, 0)
 	for _, changeKV := range balanceChanges.NstBalanceChanges {
