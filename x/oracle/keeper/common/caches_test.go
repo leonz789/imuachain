@@ -106,7 +106,7 @@ func TestRotateStakerList(t *testing.T) {
 			expected: &result{
 				stakerList: []string{},
 				updatedMap: nil,
-				errStr:     "remove more stakers than exists",
+				errStr:     "cannot remove staker from empty list",
 			},
 		},
 		{
