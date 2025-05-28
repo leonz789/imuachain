@@ -51,7 +51,8 @@ message StakerList {
   repeated string staker_addrs = 1;
 }
 
-// StakerInfo defines the basic info of a staker
+// Staker defines the basic info of a staker without address and balance history.
+// Used for compact representation when full StakerInfo is not needed.
 message Staker {
   // staker's index
   uint32 staker_index = 1;

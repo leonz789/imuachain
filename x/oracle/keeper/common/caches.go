@@ -46,8 +46,8 @@ func (c *Caches) RotateStakerList(chainID uint64, indexes []uint32) (map[uint32]
 	}
 	sl := c.nstStakerList[chainID]
 	l2 := len(sl)
-	if len(sl) == 0 {
-		return nil, fmt.Errorf("remove more stakers than exists, existing:%d, remove:%d", l2, l)
+	if l2 == 0 {
+		return nil, fmt.Errorf("cannot remove stakers from empty list for chainID %d", chainID)
 	}
 	// Sort indexes in ascending order so we can safely remove from the end
 	slices.Sort(indexes)
@@ -61,7 +61,7 @@ func (c *Caches) RotateStakerList(chainID uint64, indexes []uint32) (map[uint32]
 	}
 	// Validate all indexes are in range
 	if int(indexes[l-1]) >= l2 {
-		return nil, fmt.Errorf("remove index exceeds exisintg max index, max:%d, remove:%d", l2, indexes[l-1])
+		return nil, fmt.Errorf("remove index exceeds existing max index, max:%d, remove:%d", l2-1, indexes[l-1])
 	}
 	// ret will map removed index to the staker that replaced it (if any)
 	ret := make(map[uint32]string)

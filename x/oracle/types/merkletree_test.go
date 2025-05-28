@@ -207,10 +207,10 @@ func TestMerkleTreeInvalidInputs(t *testing.T) {
 	// Empty data
 	_, err = DeriveMT(32, []byte{})
 	require.Error(t, err)
-	// Mismatched leaf count and data size
-	_ = make([]byte, 64)
-	_, err = NewMT(32, 3, emptyHash) // 3 leaves, but no data
-	require.NoError(t, err)          // Should not error, but tree is empty
+	// Mismatched leaf count and data size, 3 leaves, but no data
+	_, err = NewMT(32, 3, emptyHash)
+	// Should not error, but tree is empty
+	require.NoError(t, err)
 }
 
 func TestMerkleTreeProofVerificationAllLeaves(t *testing.T) {

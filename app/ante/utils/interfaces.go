@@ -46,8 +46,9 @@ type OracleKeeper interface {
 	CheckAndIncreaseNonce(ctx sdk.Context, validator string, feederID uint64, nonce uint32) (prevNonce uint32, err error)
 	// NextPieceIndexByFeederID returns the next piece index for the given feeder ID
 	NextPieceIndexByFeederID(ctx sdk.Context, feederID uint64) (uint32, bool)
-	// CheckAndIncreaseToNextPieceIndex validates piece index and increments it for the next transaction
-	CheckAndIncreaseToNextPieceIndex(ctx sdk.Context, validator string, feederID uint64, NextPieceIndex uint32) (nextPieceIndex uint32, err error)
+	// CheckAndIncreaseToNextPieceIndex validates a feeder's piece index and increments it for the next transaction
+	// It returns the updated piece index or an error if the validation fails.
+	CheckAndIncreaseToNextPieceIndex(ctx sdk.Context, validator string, feederID uint64, nextPieceIndex uint32) (udpatedNextPieceIndex uint32, err error)
 	// GetMaxNonceFromCache returns the maximum nonce value from the cache.
 	GetMaxNonceFromCache() int32
 	// GetPieceWithProof retrieves a piece with its proof for a given price creation message.

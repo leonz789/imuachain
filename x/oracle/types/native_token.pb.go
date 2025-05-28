@@ -261,7 +261,8 @@ func (m *StakerList) GetStakerAddrs() []string {
 	return nil
 }
 
-// StakerInfo defines the basic info of a staker
+// Staker defines the basic info of a staker without address and balance history.
+// Used for compact representation when full StakerInfo is not needed.
 type Staker struct {
 	// staker's index
 	StakerIndex uint32 `protobuf:"varint,1,opt,name=staker_index,json=stakerIndex,proto3" json:"staker_index,omitempty"`
