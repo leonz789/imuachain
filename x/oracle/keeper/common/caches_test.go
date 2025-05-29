@@ -83,7 +83,7 @@ func TestRotateStakerList(t *testing.T) {
 			expected: &result{
 				stakerList: []string{"a", "b", "c", "d", "e", "f"},
 				updatedMap: nil,
-				errStr:     "remove index exceeds exisintg max index",
+				errStr:     "remove index exceeds existing max index",
 			},
 		},
 		{
@@ -106,7 +106,7 @@ func TestRotateStakerList(t *testing.T) {
 			expected: &result{
 				stakerList: []string{},
 				updatedMap: nil,
-				errStr:     "cannot remove staker from empty list",
+				errStr:     "cannot remove stakers from empty list",
 			},
 		},
 		{
@@ -136,7 +136,7 @@ func TestRotateStakerList(t *testing.T) {
 			expected: &result{
 				stakerList: []string{"a"},
 				updatedMap: nil,
-				errStr:     "remove index exceeds exisintg max index",
+				errStr:     "remove index exceeds existing max index",
 			},
 		},
 		{
