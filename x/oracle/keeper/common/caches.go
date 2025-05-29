@@ -15,24 +15,24 @@ func NewCaches() *Caches {
 	}
 }
 
-func (c *Caches) GetNSTStakerList(chainID uint64) []string {
+func (c *Caches) ensureInitialized() {
 	if c.nstStakerList == nil {
 		c.nstStakerList = make(map[uint64][]string)
 	}
+}
+
+func (c *Caches) GetNSTStakerList(chainID uint64) []string {
+	c.ensureInitialized()
 	return c.nstStakerList[chainID]
 }
 
 func (c *Caches) SetNSTStakerList(chainID uint64, sl []string) {
-	if c.nstStakerList == nil {
-		c.nstStakerList = make(map[uint64][]string)
-	}
+	c.ensureInitialized()
 	c.nstStakerList[chainID] = sl
 }
 
 func (c *Caches) RemoveNSTStakerList(chainID uint64) {
-	if c.nstStakerList == nil {
-		c.nstStakerList = make(map[uint64][]string)
-	}
+	c.ensureInitialized()
 	delete(c.nstStakerList, chainID)
 }
 
