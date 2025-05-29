@@ -20034,7 +20034,7 @@
               "properties": {
                 "version": {
                   "type": "string",
-                  "format": "int64",
+                  "format": "uint64",
                   "title": "version of the staker validator list changes"
                 },
                 "staker_info": {
@@ -20172,7 +20172,7 @@
               "properties": {
                 "version": {
                   "type": "string",
-                  "format": "int64",
+                  "format": "uint64",
                   "title": "version of the staker validator list changes"
                 },
                 "staker_infos": {
@@ -20368,7 +20368,7 @@
               "properties": {
                 "version": {
                   "type": "string",
-                  "format": "int64",
+                  "format": "uint64",
                   "title": "version of the staker validator list changes"
                 },
                 "staker_list": {
@@ -42988,7 +42988,7 @@
       "properties": {
         "version": {
           "type": "string",
-          "format": "int64",
+          "format": "uint64",
           "title": "version of the staker validator list changes"
         },
         "staker_info": {
@@ -43063,7 +43063,7 @@
       "properties": {
         "version": {
           "type": "string",
-          "format": "int64",
+          "format": "uint64",
           "title": "version of the staker validator list changes"
         },
         "staker_infos": {
@@ -43158,7 +43158,7 @@
       "properties": {
         "version": {
           "type": "string",
-          "format": "int64",
+          "format": "uint64",
           "title": "version of the staker validator list changes"
         },
         "staker_list": {
