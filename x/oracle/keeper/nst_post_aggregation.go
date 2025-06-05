@@ -556,7 +556,6 @@ func (k Keeper) removeStakerIndexes(ctx sdk.Context, chainID uint64, removedInde
 		if latestBz == nil {
 			return fmt.Errorf("latest staker index not found for chainID %d", chainID)
 		}
-		// latestStakerIndex, err := types.BytesToUint32(store.Get(keyLatestStakerIndex))
 		latestStakerIndex, err := types.BytesToUint32(latestBz)
 		if err != nil {
 			return fmt.Errorf("failed to parse latest staker index: %w", err)
