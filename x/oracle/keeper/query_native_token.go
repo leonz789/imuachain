@@ -46,7 +46,10 @@ func (k Keeper) StakerInfo(goCtx context.Context, req *types.QueryStakerInfoRequ
 	}
 	stakerInfo := k.GetStakerInfo(ctx, chainID, req.StakerAddr)
 	// #nosec G115
-	versions, _ := k.GetNSTVersionsFromAssetID(ctx, req.AssetId)
+	versions, found := k.GetNSTVersionsFromAssetID(ctx, req.AssetId)
+	if !found {
+		return nil, status.Error(codes.NotFound, "versions not found for the given asset ID")
+	}
 	return &types.QueryStakerInfoResponse{Version: &versions, StakerInfo: &stakerInfo}, nil
 }
 

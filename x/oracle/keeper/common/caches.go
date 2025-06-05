@@ -36,6 +36,8 @@ func (c *Caches) RemoveNSTStakerList(chainID uint64) {
 	delete(c.nstStakerList, chainID)
 }
 
+// AddNSTStaker adds a staker to the list for the given chainID at the specified index.
+// NOTE: not concurrent safe, caller must ensure synchronization.
 func (c *Caches) AddNSTStaker(chainID uint64, staker string, index uint32) bool {
 	if c.nstStakerList == nil {
 		if index > 0 {

@@ -183,7 +183,7 @@ func startExternalFeeder(binPath, configFile, sourcesConfPath string, logger log
 		logger.Info("external feeder started", "pid", cmd.Process.Pid)
 
 		// write PID file
-		_ = os.WriteFile(feederPIDFile, []byte(fmt.Sprintf("%d", cmd.Process.Pid)), 0600)
+		_ = os.WriteFile(feederPIDFile, []byte(fmt.Sprintf("%d", cmd.Process.Pid)), 0o600)
 
 		err := cmd.Wait()
 		logger.Error("external feeder exited", "err", err)
