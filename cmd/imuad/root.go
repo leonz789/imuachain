@@ -139,6 +139,7 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 	startCmd.Flags().String(flagFeederLogPath, "", "oracle feeder log file")
 	startCmd.Flags().String(flagFeederMnemonic, "", "set validator consensus key's mnemonic")
 	startCmd.Flags().String(flagFeederBinPath, "", "path to the price feeder binary")
+	startCmd.Flags().Int(flagFeederStatusListenPort, 0, "port to listen for price feeder status requests")
 	preRunE := startCmd.PreRunE
 	// add preRun to run price-feeder first before starting the node
 	startCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
@@ -151,8 +152,9 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 			mnemonic, _ := cmd.Flags().GetString(flagFeederMnemonic)
 			binPath, _ := cmd.Flags().GetString(flagFeederBinPath)
 			logPath, _ := cmd.Flags().GetString(flagFeederLogPath)
+			statusPort, _ := cmd.Flags().GetInt(flagFeederStatusListenPort)
 			serverCtx := sdkserver.GetServerContextFromCmd(cmd)
-			go launchFeeder(configFile, sourcesConfPath, binPath, mnemonic, serverCtx.Logger.With("module", "price-feeder"), logPath)
+			go launchFeeder(configFile, sourcesConfPath, binPath, mnemonic, serverCtx.Logger.With("module", "price-feeder"), logPath, statusPort)
 		}
 		return preRunE(cmd, args)
 	}

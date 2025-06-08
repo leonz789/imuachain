@@ -13,19 +13,25 @@ import (
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	pricefeeder "github.com/imua-xyz/price-feeder/external"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/cometbft/cometbft/libs/log"
 )
 
 const (
-	flagOracle         = "oracle"
-	flagFeederLogPath  = "feeder_log_path"
-	flagFeederMnemonic = "feeder_mnemonic"
-	flagFeederBinPath  = "feeder_bin"
+	flagOracle                 = "oracle"
+	flagFeederLogPath          = "feeder_log_path"
+	flagFeederMnemonic         = "feeder_mnemonic"
+	flagFeederBinPath          = "feeder_bin"
+	flagFeederStatusGRPCAddr   = "grpc_addr"
+	flagFeederStatusListenPort = "status_port"
 
 	flagSourcesConfPath = "sources_path"
 	flagConfFile        = "config"
 	confOracle          = "oracle_feeder.yaml"
+
+	defaultStatusGRPCAddr = "localhost:50052"
 )
 
 var feederPIDFile = filepath.Join(os.TempDir(), "feeder.pid")
@@ -38,7 +44,34 @@ func externalCommand() *cobra.Command {
 
 	cmd.AddCommand(feederCommand())
 	cmd.AddCommand(feederStopCommand())
+	cmd.AddCommand(feederStatusCommand())
 	return cmd
+}
+
+func feederStatusCommand() *cobra.Command {
+	feederStatusCmd := &cobra.Command{
+		Use:   "feeder-status",
+		Short: "Check tokens status of the embedded oracle price feeder",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			grpcAddr, _ := cmd.Flags().GetString(flagFeederStatusGRPCAddr)
+			if grpcAddr == "" {
+				grpcAddr = defaultStatusGRPCAddr
+			}
+			res, err := pricefeeder.GetAllTokens(grpcAddr)
+			if err != nil {
+				message, err := pricefeeder.FilterErrors(err)
+				if err != nil {
+					return err
+				}
+				fmt.Println("fetching token status:", message)
+				return nil
+			}
+			printProto(res)
+			return nil
+		},
+	}
+	feederStatusCmd.Flags().String(flagFeederStatusGRPCAddr, "", "gRPC address to connect to the price feeder for status check")
+	return feederStatusCmd
 }
 
 func feederCommand() *cobra.Command {
@@ -50,11 +83,12 @@ func feederCommand() *cobra.Command {
 			sourcesConfPath, _ := cmd.Flags().GetString(flagSourcesConfPath)
 			logPath, _ := cmd.Flags().GetString(flagFeederLogPath)
 			mnemonic, _ := cmd.Flags().GetString(flagFeederMnemonic)
+			statusPort, _ := cmd.Flags().GetInt(flagFeederStatusListenPort)
 			// TODO: refactor logger ?
 			logger := sdkserver.GetServerContextFromCmd(cmd).Logger.With("module", "price-feeder")
-			err := pricefeeder.StartPriceFeeder(configFile, mnemonic, sourcesConfPath, logPath, 50155, logger)
+			err := pricefeeder.StartPriceFeeder(configFile, mnemonic, sourcesConfPath, logPath, statusPort, logger)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to start price feeder, err: %w", err)
 			}
 			return nil
 		},
@@ -63,6 +97,7 @@ func feederCommand() *cobra.Command {
 	feederCmd.Flags().String(flagSourcesConfPath, "", "path to sources config")
 	feederCmd.Flags().String(flagFeederLogPath, "", "path to feeder logs")
 	feederCmd.Flags().String(flagFeederMnemonic, "", "Oracle mnemonic")
+	feederCmd.Flags().Int(flagFeederStatusListenPort, 0, "Port for the feeder status gRPC server")
 
 	_ = feederCmd.MarkFlagRequired(flagConfFile)
 	_ = feederCmd.MarkFlagRequired(flagSourcesConfPath)
@@ -103,7 +138,7 @@ func feederStopCommand() *cobra.Command {
 	return feederStopCmd
 }
 
-func launchFeeder(configFile, sourcesConfPath, binPath, mnemonic string, logger log.Logger, logPath string) {
+func launchFeeder(configFile, sourcesConfPath, binPath, mnemonic string, logger log.Logger, logPath string, statusPort int) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -123,6 +158,11 @@ func launchFeeder(configFile, sourcesConfPath, binPath, mnemonic string, logger 
 				return
 			}
 
+			if statusPort <= 0 {
+				statusPort = 0
+			}
+			statusPortStr := strconv.Itoa(statusPort)
+
 			cmd := exec.Command(selfPath,
 				"external",
 				"feeder",
@@ -130,6 +170,7 @@ func launchFeeder(configFile, sourcesConfPath, binPath, mnemonic string, logger 
 				fmt.Sprintf("--%s", flagSourcesConfPath), sourcesConfPath,
 				fmt.Sprintf("--%s", flagFeederLogPath), logPath,
 				fmt.Sprintf("--%s", flagFeederMnemonic), mnemonic,
+				fmt.Sprintf("--%s", flagFeederStatusListenPort), statusPortStr,
 			)
 
 			cmd.Stdout = os.Stdout
@@ -198,4 +239,16 @@ func backoff(retry int) time.Duration {
 		d = 30 * time.Second
 	}
 	return d
+}
+
+func printProto(m proto.Message) {
+	if m == nil {
+		fmt.Println("nil proto message")
+		return
+	}
+	marshaled, err := protojson.MarshalOptions{EmitUnpopulated: true, UseProtoNames: true}.Marshal(m)
+	if err != nil {
+		fmt.Printf("failed to print proto message, error:%v", err)
+	}
+	fmt.Println(string(marshaled))
 }
