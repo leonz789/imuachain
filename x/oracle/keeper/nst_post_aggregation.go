@@ -366,7 +366,6 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance, feedVer
 	if stakerInfo.StakerAddr == "" {
 		// update latest staker index
 		latestIndex := k.IncreaseLatestStakerIndex(ctx, chainID)
-
 		staker.StakerIndex = latestIndex
 		// set index for stakerAddress
 		k.SetStakerIndex(ctx, chainID, latestIndex, stakerAddr)
@@ -543,58 +542,59 @@ func (k Keeper) SetStaker(ctx sdk.Context, chainID uint64, stakerAddr string, st
 
 // removeStakerIndexes rotates the staker list after removals, updating indexes and cache as needed.
 func (k Keeper) removeStakerIndexes(ctx sdk.Context, chainID uint64, removedIndexes []uint32) error {
+	if len(removedIndexes) == 0 {
+		return nil
+	}
 	updatedStakers, err := k.c.RotateStakerList(chainID, removedIndexes)
 	if err != nil {
 		k.refreshCachedStakerList(ctx, chainID)
 		return fmt.Errorf("failed to rotate stakerList")
 	}
-	l := len(updatedStakers)
-	if l > 0 {
-		store := ctx.KVStore(k.storeKey)
-		keyLatestStakerIndex := types.NSTLatestStakerIndexKey(chainID)
-		latestBz := store.Get(keyLatestStakerIndex)
-		if latestBz == nil {
-			return fmt.Errorf("latest staker index not found for chainID %d", chainID)
-		}
-		latestStakerIndex, err := types.BytesToUint32(latestBz)
-		if err != nil {
-			return fmt.Errorf("failed to parse latest staker index: %w", err)
-		}
-		if l > int(latestStakerIndex) {
-			store.Delete(keyLatestStakerIndex)
-		} else {
-			// #nosec G115
-			latestStakerIndex -= uint32(l)
-			store.Set(keyLatestStakerIndex, types.Uint32Bytes(latestStakerIndex))
-		}
-		if len(updatedStakers) > 0 {
-			deleted := map[uint32]bool{}
-			for index, stakerAddr := range updatedStakers {
-				keyStaker := types.NSTStakerKey(chainID, stakerAddr)
-				staker := types.Staker{}
-				bz := store.Get(keyStaker)
-				if bz == nil {
-					k.refreshCachedStakerList(ctx, chainID)
-					return fmt.Errorf("staker %s not found when rotate index for removed stakers", stakerAddr)
-				}
-				k.cdc.MustUnmarshal(bz, &staker)
-
-				keyStakerAddr := types.NSTStakerAddrKey(chainID, staker.StakerIndex)
-				store.Delete(keyStakerAddr)
-				deleted[staker.StakerIndex] = true
-
-				staker.StakerIndex = index
-				store.Set(keyStaker, k.cdc.MustMarshal(&staker))
-
-				keyStakerAddr = types.NSTStakerAddrKey(chainID, index)
-				store.Set(keyStakerAddr, []byte(stakerAddr))
+	store := ctx.KVStore(k.storeKey)
+	keyLatestStakerIndex := types.NSTLatestStakerIndexKey(chainID)
+	latestBz := store.Get(keyLatestStakerIndex)
+	if latestBz == nil {
+		return fmt.Errorf("latest staker index not found for chainID %d", chainID)
+	}
+	latestStakerIndex, err := types.BytesToUint32(latestBz)
+	if err != nil {
+		return fmt.Errorf("failed to parse latest staker index: %w", err)
+	}
+	l := len(removedIndexes)
+	if l > int(latestStakerIndex) {
+		store.Delete(keyLatestStakerIndex)
+	} else {
+		// #nosec G115
+		latestStakerIndex -= uint32(l)
+		store.Set(keyLatestStakerIndex, types.Uint32Bytes(latestStakerIndex))
+	}
+	deleted := map[uint32]bool{}
+	if len(updatedStakers) > 0 {
+		for index, stakerAddr := range updatedStakers {
+			keyStaker := types.NSTStakerKey(chainID, stakerAddr)
+			staker := types.Staker{}
+			bz := store.Get(keyStaker)
+			if bz == nil {
+				k.refreshCachedStakerList(ctx, chainID)
+				return fmt.Errorf("staker %s not found when rotate index for removed stakers", stakerAddr)
 			}
-			for _, removedIndex := range removedIndexes {
-				if _, ok := updatedStakers[removedIndex]; !ok && !deleted[removedIndex] {
-					keyStakerAddr := types.NSTStakerAddrKey(chainID, removedIndex)
-					store.Delete(keyStakerAddr)
-				}
-			}
+			k.cdc.MustUnmarshal(bz, &staker)
+
+			keyStakerAddr := types.NSTStakerAddrKey(chainID, staker.StakerIndex)
+			store.Delete(keyStakerAddr)
+			deleted[staker.StakerIndex] = true
+
+			staker.StakerIndex = index
+			store.Set(keyStaker, k.cdc.MustMarshal(&staker))
+
+			keyStakerAddr = types.NSTStakerAddrKey(chainID, index)
+			store.Set(keyStakerAddr, []byte(stakerAddr))
+		}
+	}
+	for _, removedIndex := range removedIndexes {
+		if _, ok := updatedStakers[removedIndex]; !ok && !deleted[removedIndex] {
+			keyStakerAddr := types.NSTStakerAddrKey(chainID, removedIndex)
+			store.Delete(keyStakerAddr)
 		}
 	}
 	return nil
