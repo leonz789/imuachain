@@ -147,7 +147,8 @@ func (AppModule) ConsensusVersion() uint64 { return 1 }
 
 // EndBlock contains the logic that is automatically triggered at the end of each block
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
-	am.keeper.FlushCachedNSTStakersEvent(ctx)
+	// am.keeper.FlushCachedNSTStakersEvent(ctx)
 	am.keeper.EndBlock(ctx)
+	am.keeper.FlushCachedNSTStakersEvent(ctx)
 	return []abci.ValidatorUpdate{}
 }

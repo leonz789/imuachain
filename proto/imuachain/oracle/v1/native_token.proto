@@ -45,10 +45,20 @@ message StakerInfo {
   repeated BalanceInfo balance_list = 4;
 }
 
+// StakerListEntry defines the entry of staker list
+message StakerListEntry {
+  // staker's address
+  string staker_addr = 1;
+  // active version of the staker
+  uint64 active_version = 2;
+  // latest version of the staker
+  uint64 latest_version = 3;
+}
+
 // StakerList defines the list of stakers
 message StakerList {
-  // list of staker's address
-  repeated string staker_addrs = 1;
+  // list of stakers
+  repeated StakerListEntry stakers = 1;
 }
 
 // Staker defines the basic info of a staker without address and balance history.

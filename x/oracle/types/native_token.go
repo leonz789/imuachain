@@ -1,10 +1,16 @@
 package types
 
-const maxSize = 100
+const (
+	maxSize        = 100
+	EmptyValidator = "0x00"
+)
 
 func (b *Balances) Append(bi *BalanceInfo) {
 	if len(b.BalanceList) >= maxSize {
 		b.BalanceList = b.BalanceList[1:]
+	}
+	if b.BalanceList == nil {
+		b.BalanceList = make([]*BalanceInfo, 0, maxSize)
 	}
 	b.BalanceList = append(b.BalanceList, bi)
 }

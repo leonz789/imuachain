@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	assetstypes "github.com/imua-xyz/imuachain/x/assets/types"
 	dogfoodkeeper "github.com/imua-xyz/imuachain/x/dogfood/keeper"
 	dogfoodtypes "github.com/imua-xyz/imuachain/x/dogfood/types"
 	"github.com/imua-xyz/imuachain/x/oracle/types"
@@ -98,4 +99,9 @@ type KeeperDogfood = interface {
 	ValidatorByConsAddr(ctx sdk.Context, addr sdk.ConsAddress) stakingtypes.ValidatorI
 	SlashWithInfractionReason(ctx sdk.Context, addr sdk.ConsAddress, infractionHeight, power int64, slashFactor sdk.Dec, infraction stakingtypes.Infraction) sdkmath.Int
 	Jail(ctx sdk.Context, addr sdk.ConsAddress)
+}
+
+type AssetsKeeper interface {
+	GetAssetsDecimal(ctx sdk.Context, assets map[string]interface{}) (decimals map[string]uint32, err error)
+	GetStakerBalanceByAsset(ctx sdk.Context, stakerID string, assetID string) (balance assetstypes.StakerBalance, err error)
 }

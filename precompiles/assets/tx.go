@@ -48,6 +48,16 @@ func (p Precompile) DepositOrWithdraw(
 		return nil, err
 	}
 
+	stakerID, assetID := assetstypes.GetStakerIDAndAssetID(depositWithdrawParams.ClientChainLzID,
+		depositWithdrawParams.StakerAddress, depositWithdrawParams.AssetsAddress)
+	var nstBalance assetstypes.StakerBalance
+	if depositWithdrawParams.Action == assetstypes.DepositNST {
+		// nst balance before depositNST
+		nstBalance, err = p.assetsKeeper.GetStakerBalanceByAsset(ctx, assetID, stakerID)
+		if err != nil {
+			return nil, err
+		}
+	}
 	// call assets keeper to perform the deposit or withdraw action
 	finalDepositAmount, err := p.assetsKeeper.PerformDepositOrWithdraw(ctx, depositWithdrawParams)
 	if err != nil {
@@ -59,13 +69,15 @@ func (p Precompile) DepositOrWithdraw(
 		depositWithdrawParams.Action == assetstypes.WithdrawNST {
 		opAmount := depositWithdrawParams.OpAmount
 		if depositWithdrawParams.Action == assetstypes.WithdrawNST {
-			opAmount = opAmount.Neg()
+			// nstBalance after withdrawNST
+			nstBalance, err = p.assetsKeeper.GetStakerBalanceByAsset(ctx, assetID, stakerID)
+			if err != nil {
+				return nil, err
+			}
 		}
-		stakerID, assetID := assetstypes.GetStakerIDAndAssetID(depositWithdrawParams.ClientChainLzID,
-			depositWithdrawParams.StakerAddress, depositWithdrawParams.AssetsAddress)
 		err = p.assetsKeeper.UpdateNSTValidatorListForStaker(ctx, assetID, stakerID,
 			hexutil.Encode(depositWithdrawParams.ValidatorID),
-			opAmount)
+			opAmount, !nstBalance.Balance.IsPositive())
 		if err != nil {
 			return nil, err
 		}

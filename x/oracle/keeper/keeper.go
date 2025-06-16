@@ -23,7 +23,7 @@ type (
 		authority  string
 		common.KeeperDogfood
 		delegationKeeper types.DelegationKeeper
-		assetsKeeper     types.AssetsKeeper
+		assetsKeeper     common.AssetsKeeper
 		types.SlashingKeeper
 		*feedermanagement.FeederManager
 		postHandlers               map[int64]common.PostAggregationHandler
@@ -41,7 +41,7 @@ func NewKeeper(
 	ps paramtypes.Subspace,
 	sKeeper common.KeeperDogfood,
 	delegationKeeper types.DelegationKeeper,
-	assetsKeeper types.AssetsKeeper,
+	assetsKeeper common.AssetsKeeper,
 	authority string,
 	slashingKeeper types.SlashingKeeper,
 ) Keeper {

@@ -223,14 +223,29 @@ func (k Keeper) getStakerListNoCache(ctx sdk.Context, assetID string, chainID ui
 	iterator := sdk.KVStorePrefixIterator(store, []byte{})
 	defer iterator.Close()
 	stakerList := types.StakerList{
-		StakerAddrs: make([]string, 0),
+		Stakers: make([]*types.StakerListEntry, 0),
 	}
 	for ; iterator.Valid(); iterator.Next() {
 		stakerAddr := string(iterator.Value())
 		if stakerAddr == "" {
 			continue
 		}
-		stakerList.StakerAddrs = append(stakerList.StakerAddrs, stakerAddr)
+		keyStaker := types.NSTStakerKey(chainID, stakerAddr)
+		bz := store.Get(keyStaker)
+		if bz == nil {
+			// skip if staker not found
+			continue
+		}
+		staker := &types.Staker{}
+		k.cdc.MustUnmarshal(bz, staker)
+		se := &types.StakerListEntry{
+			StakerAddr: stakerAddr,
+		}
+		if len(staker.ValidatorList) > 0 {
+			se.ActiveVersion = staker.ValidatorList[0].Version
+			se.LatestVersion = staker.ValidatorList[len(staker.ValidatorList)-1].Version
+		}
+		stakerList.Stakers = append(stakerList.Stakers, se)
 	}
 	return stakerList
 }
@@ -249,27 +264,47 @@ func (k Keeper) GetStakerList(ctx sdk.Context, assetID string, chainID uint64) t
 	}
 	if sl := k.c.GetNSTStakerList(chainID); sl != nil {
 		return types.StakerList{
-			StakerAddrs: sl,
+			Stakers: sl,
 		}
 	}
 	stakerList := k.getStakerListNoCache(ctx, assetID, chainID)
 	// update cache
-	k.c.SetNSTStakerList(chainID, stakerList.StakerAddrs)
+	k.c.SetNSTStakerList(chainID, stakerList.Stakers)
 	return stakerList
 }
 
 // UpdateNSTValidatorListForStaker handles deposits from the assets module, updating the staker's validator list and balance.
 // Emits an event for the deposit and updates the version.
-func (k Keeper) UpdateNSTValidatorListForStaker(ctx sdk.Context, assetID, stakerID, validatorPubkey string, amount sdkmath.Int) error {
-	if amount.LT(sdkmath.ZeroInt()) {
-		return errors.New("amount should be positive")
+func (k Keeper) UpdateNSTValidatorListForStaker(ctx sdk.Context, assetID, stakerID, validatorPubkey string, amount sdkmath.Int, changeToZero bool) error {
+	if amount.IsZero() {
+		return nil
 	}
 	stakerID = strings.ToLower(stakerID)
 	stakerAddr, chainID, _ := assetstypes.ParseID(stakerID)
-
-	feederID, ok := k.GetNSTFeederIDFromClientChainID(chainID)
+	feederID, ok := k.FeederManager.GetNSTFeederIDFromClientChainID(chainID)
 	if !ok {
 		return errors.New("failed to get corresponding feederID from clientChainID")
+	}
+	var index uint32
+	var cleared bool
+
+	if changeToZero {
+		index, cleared = k.clearStaker(ctx, chainID, stakerAddr)
+		if cleared == false && amount.IsNegative() {
+			return fmt.Errorf("failed to clear staker %s on chain %d", stakerAddr, chainID)
+		}
+	}
+
+	if amount.IsNegative() {
+		if changeToZero && !ctx.IsCheckTx() {
+			versions, _ := k.GetNSTVersions(ctx, chainID)
+			eventValue := fmt.Sprintf("%s_%d_%s_%s_%d_%d_%d", types.AttributeValueNativeTokenDeposit, index, stakerAddr, types.EmptyValidator, versions.Version.Version, 0, feederID)
+			if len(*k.cachedNSTStakersEventValue) > 0 {
+				*k.cachedNSTStakersEventValue += types.DelimiterForBase64
+			}
+			*k.cachedNSTStakersEventValue += eventValue
+		}
+		return nil
 	}
 
 	amountConverted, err := k.convertDecimal(ctx, assetID, amount, feederID, true)
@@ -277,79 +312,104 @@ func (k Keeper) UpdateNSTValidatorListForStaker(ctx sdk.Context, assetID, staker
 		return err
 	}
 
-	index, _, _, err := k.updateStaker(ctx, chainID, 0, amountConverted.Uint64(), 0, stakerAddr, validatorPubkey, types.Action_ACTION_DEPOSIT)
+	updatedIndex, _, _, err := k.updateStaker(ctx, chainID, 0, amountConverted.Uint64(), 0, stakerAddr, validatorPubkey, types.Action_ACTION_DEPOSIT)
 	if err != nil {
 		return err
 	}
 
-	if !k.c.AddNSTStaker(chainID, stakerAddr, index) {
+	versions, _ := k.GetNSTVersions(ctx, chainID)
+
+	if cleared && !ctx.IsCheckTx() {
+		// we use index to sync with client about status of stakerInfo.ValidatorPubkeyList
+		eventValue := fmt.Sprintf("%s_%d_%s_%s_%d_%d_%d", types.AttributeValueNativeTokenDeposit, index, stakerAddr, types.EmptyValidator, versions.Version.Version, 0, feederID)
+		if len(*k.cachedNSTStakersEventValue) > 0 {
+			*k.cachedNSTStakersEventValue += types.DelimiterForBase64
+		}
+		*k.cachedNSTStakersEventValue += eventValue
+	}
+
+	// newly deposited staker should be added to the cached staker list
+	if !k.c.AddNSTStaker(chainID, stakerAddr, index, versions.Version.Version) {
 		k.refreshCachedStakerList(ctx, chainID)
 	}
 
-	versions, _ := k.GetNSTVersions(ctx, chainID)
-	// we use index to sync with client about status of stakerInfo.ValidatorPubkeyList
-	eventValue := fmt.Sprintf("%s_%d_%s_%s_%d_%d_%d", types.AttributeValueNativeTokenDeposit, index, stakerAddr, validatorPubkey, versions.Version.Version, amountConverted.Uint64(), feederID)
-	if len(*k.cachedNSTStakersEventValue) > 0 {
-		*k.cachedNSTStakersEventValue += types.DelimiterForBase64
-	}
 	if !ctx.IsCheckTx() {
+		eventValue := fmt.Sprintf("%s_%d_%s_%s_%d_%d_%d", types.AttributeValueNativeTokenDeposit, updatedIndex, stakerAddr, validatorPubkey, versions.Version.Version, amountConverted.Uint64(), feederID)
+		if len(*k.cachedNSTStakersEventValue) > 0 {
+			*k.cachedNSTStakersEventValue += types.DelimiterForBase64
+		}
 		*k.cachedNSTStakersEventValue += eventValue
 	}
 	return nil
 }
 
-// removeStaker removes a staker and their balances from the store when their balance becomes zero.
-// Returns the removed staker's index and a bool indicating if removal occurred.
-func (k Keeper) removeStaker(ctx sdk.Context, chainID uint64, stakerAddr string) (uint32, bool) {
-	_, found := k.GetLatestStakerIndex(ctx, chainID)
-	if !found {
-		return 0, false
-	}
-
+func (k Keeper) clearStaker(ctx sdk.Context, chainID uint64, stakerAddr string) (uint32, bool) {
 	store := ctx.KVStore(k.storeKey)
 	keyStaker := types.NSTStakerKey(chainID, stakerAddr)
-	staker := types.Staker{}
 	bz := store.Get(keyStaker)
 	if bz == nil {
 		return 0, false
 	}
-
+	// remove staker validator list and reset latest balance
+	staker := types.Staker{}
 	k.cdc.MustUnmarshal(bz, &staker)
-	removedIndex := staker.StakerIndex
-	// remove staker basic info
-	store.Delete(keyStaker)
-
-	// remove balanceList
+	// reset validator list
+	staker.ValidatorList = []*types.ValidatorDeposit{}
+	store.Set(keyStaker, k.cdc.MustMarshal(&staker))
+	// reset balance list
 	keyBalances := types.NSTBalancesKey(chainID, stakerAddr)
-	store.Delete(keyBalances)
-	return removedIndex, true
+	bz = store.Get(keyBalances)
+	if bz == nil {
+		return staker.StakerIndex, true
+	}
+	balances := &types.Balances{}
+	k.cdc.MustUnmarshal(bz, balances)
+	if len(balances.BalanceList) == 0 {
+		return staker.StakerIndex, true
+	}
+	newBalance := *(balances.BalanceList[len(balances.BalanceList)-1])
+
+	newBalance.Index++
+	newBalance.Balance = 0
+	// #nosec G115
+	newBalance.Block = uint64(ctx.BlockHeight())
+	// withdraw or slash from imuachain
+	// TODO: update ACTION_WITHDRAW to ACTION_WITHDRAW_SLASH
+	newBalance.Change = types.Action_ACTION_WITHDRAW
+	balances.Append(&newBalance)
+	bz = k.cdc.MustMarshal(balances)
+	store.Set(keyBalances, bz)
+	if !k.c.ClearNSTStaker(chainID, staker.StakerIndex) {
+		k.refreshCachedStakerList(ctx, chainID)
+	}
+	return staker.StakerIndex, true
 }
 
 // updateStaker updates a staker's info (validator list, balances, index, version) based on the action (deposit, slash, refund, etc).
 // Handles new stakers, balance changes, and removal if balance is zero.
 // Returns updated index, removal status, balance delta, and error if any.
-func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance, feedVersion uint64, stakerAddr string, validator string, action types.Action) (updatedIndex uint32, removed bool, balanceDelta sdkmath.Int, err error) {
+func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance, feedVersion uint64, stakerAddr string, validator string, action types.Action) (updatedIndex uint32, cleared bool, balanceDelta sdkmath.Int, err error) {
 	if action == types.Action_ACTION_DEPOSIT && validator == "" {
 		err = fmt.Errorf("deposit should have one validator, but got empty string")
-		return updatedIndex, removed, balanceDelta, err
+		return updatedIndex, cleared, balanceDelta, err
 	}
 
 	stakerInfo := k.GetStakerInfo(ctx, chainID, stakerAddr)
 	// make sure stakerInfo is not empty when the action is not DEPOSIT, stakerAddr != "" means both len(stakerInfo.BalanceList) > 0 and len(stakerInfo.ValidatorList) > 0
 	if action != types.Action_ACTION_DEPOSIT && (stakerInfo.StakerAddr == "" || feedVersion == 0) {
-		return 0, false, sdkmath.ZeroInt(), fmt.Errorf("staker or balanceList is not found, stakerAddr is empty: %t, balanceList is empty: %t, feedVersion is zero: %t, action: %s",
+		return updatedIndex, false, sdkmath.ZeroInt(), fmt.Errorf("staker or balanceList is not found, stakerAddr is empty: %t, balanceList is empty: %t, feedVersion is zero: %t, action: %s",
 			stakerInfo.StakerAddr == "", len(stakerInfo.BalanceList) == 0, feedVersion == 0, action)
 	}
 
 	balanceAtFeedVersion, latestBalance, latestVersion := stakerInfo.GetBalanceAtVersion(feedVersion)
 	store := ctx.KVStore(k.storeKey)
-	// if latestVersion > feedVersion, it means that there are new dposits after the last feed
+	// if latestVersion > feedVersion, it means that there are new dposits after the last feed, it's ok we keep the '0' validators as long as there are non-zero balance validators.
 	if action == types.Action_ACTION_SLASH_REFUND && balance == 0 && latestVersion <= feedVersion {
 		// this is a special case, we need to remove the staker from the list
 		// and update the index of the last staker
 		balanceDelta = sdkmath.ZeroInt().Sub(sdkmath.NewIntFromUint64(balanceAtFeedVersion))
-		updatedIndex, removed = k.removeStaker(ctx, chainID, stakerAddr)
-		return updatedIndex, removed, balanceDelta, err
+		updatedIndex, cleared = k.clearStaker(ctx, chainID, stakerAddr)
+		return updatedIndex, cleared, balanceDelta, err
 	}
 
 	newBalance := &types.BalanceInfo{
@@ -363,6 +423,7 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance, feedVer
 		ValidatorList: stakerInfo.ValidatorList,
 	}
 	balanceDelta = sdkmath.NewIntFromUint64(balance)
+	// deposit
 	if stakerInfo.StakerAddr == "" {
 		// update latest staker index
 		latestIndex := k.IncreaseLatestStakerIndex(ctx, chainID)
@@ -370,15 +431,15 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance, feedVer
 		// set index for stakerAddress
 		k.SetStakerIndex(ctx, chainID, latestIndex, stakerAddr)
 	} else {
+		// deposit, refund/slash
 		// update staker with new validator
 		staker.StakerIndex = stakerInfo.StakerIndex
-		// this should always be true
 		newBalance.Index = stakerInfo.BalanceList[len(stakerInfo.BalanceList)-1].Index
-		if action == types.Action_ACTION_DEPOSIT {
-			newBalance.RoundID = stakerInfo.BalanceList[len(stakerInfo.BalanceList)-1].RoundID
-		} else {
+		if action == types.Action_ACTION_SLASH_REFUND {
 			balanceDelta = balanceDelta.Sub(sdkmath.NewIntFromUint64(balanceAtFeedVersion))
 			newBalance.Balance -= balanceAtFeedVersion
+		} else {
+			newBalance.RoundID = stakerInfo.BalanceList[len(stakerInfo.BalanceList)-1].RoundID
 		}
 	}
 
@@ -405,7 +466,7 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance, feedVer
 	keyBalances := types.NSTBalancesKey(chainID, stakerAddr)
 	bz := k.cdc.MustMarshal(balances)
 	store.Set(keyBalances, bz)
-	return updatedIndex, removed, balanceDelta, err
+	return updatedIndex, cleared, balanceDelta, err
 }
 
 func (k Keeper) GetNSTVersionsFromAssetID(ctx sdk.Context, assetID string) (types.NSTVersion, bool) {
@@ -524,6 +585,7 @@ func (k Keeper) IncreaseLatestStakerIndex(ctx sdk.Context, chainID uint64) uint3
 		return 0
 	}
 	latestStakerIndex, err := types.BytesToUint32(bz)
+	// TODO: handle error properly, maybe panic or log, don't confuse with the first index:0
 	if err != nil {
 		return 0
 	}
@@ -540,66 +602,6 @@ func (k Keeper) SetStaker(ctx sdk.Context, chainID uint64, stakerAddr string, st
 	store.Set(keyStaker, bz)
 }
 
-// removeStakerIndexes rotates the staker list after removals, updating indexes and cache as needed.
-func (k Keeper) removeStakerIndexes(ctx sdk.Context, chainID uint64, removedIndexes []uint32) error {
-	if len(removedIndexes) == 0 {
-		return nil
-	}
-	updatedStakers, err := k.c.RotateStakerList(chainID, removedIndexes)
-	if err != nil {
-		k.refreshCachedStakerList(ctx, chainID)
-		return fmt.Errorf("failed to rotate stakerList")
-	}
-	store := ctx.KVStore(k.storeKey)
-	keyLatestStakerIndex := types.NSTLatestStakerIndexKey(chainID)
-	latestBz := store.Get(keyLatestStakerIndex)
-	if latestBz == nil {
-		return fmt.Errorf("latest staker index not found for chainID %d", chainID)
-	}
-	latestStakerIndex, err := types.BytesToUint32(latestBz)
-	if err != nil {
-		return fmt.Errorf("failed to parse latest staker index: %w", err)
-	}
-	l := len(removedIndexes)
-	if l > int(latestStakerIndex) {
-		store.Delete(keyLatestStakerIndex)
-	} else {
-		// #nosec G115
-		latestStakerIndex -= uint32(l)
-		store.Set(keyLatestStakerIndex, types.Uint32Bytes(latestStakerIndex))
-	}
-	deleted := map[uint32]bool{}
-	if len(updatedStakers) > 0 {
-		for index, stakerAddr := range updatedStakers {
-			keyStaker := types.NSTStakerKey(chainID, stakerAddr)
-			staker := types.Staker{}
-			bz := store.Get(keyStaker)
-			if bz == nil {
-				k.refreshCachedStakerList(ctx, chainID)
-				return fmt.Errorf("staker %s not found when rotate index for removed stakers", stakerAddr)
-			}
-			k.cdc.MustUnmarshal(bz, &staker)
-
-			keyStakerAddr := types.NSTStakerAddrKey(chainID, staker.StakerIndex)
-			store.Delete(keyStakerAddr)
-			deleted[staker.StakerIndex] = true
-
-			staker.StakerIndex = index
-			store.Set(keyStaker, k.cdc.MustMarshal(&staker))
-
-			keyStakerAddr = types.NSTStakerAddrKey(chainID, index)
-			store.Set(keyStakerAddr, []byte(stakerAddr))
-		}
-	}
-	for _, removedIndex := range removedIndexes {
-		if _, ok := updatedStakers[removedIndex]; !ok && !deleted[removedIndex] {
-			keyStakerAddr := types.NSTStakerAddrKey(chainID, removedIndex)
-			store.Delete(keyStakerAddr)
-		}
-	}
-	return nil
-}
-
 // convertDecimal converts an amount between asset and oracle module decimals, depending on direction.
 // Handles precision and rounding errors.
 func (k Keeper) convertDecimal(ctx sdk.Context, assetID string, amount sdkmath.Int, feederID uint64, fromAssetsModule bool) (sdkmath.Int, error) {
@@ -609,7 +611,7 @@ func (k Keeper) convertDecimal(ctx sdk.Context, assetID string, amount sdkmath.I
 	}
 	// #nosec G115
 	fromDecimal := int32(decimalMap[assetID])
-	toDecimal, err := k.GetDecimalFromFeederID(feederID)
+	toDecimal, err := k.FeederManager.GetDecimalFromFeederID(feederID)
 	if err != nil {
 		return sdkmath.ZeroInt(), err
 	}
@@ -642,8 +644,8 @@ func (k Keeper) convertDecimal(ctx sdk.Context, assetID string, amount sdkmath.I
 
 func (k Keeper) refreshCachedStakerList(ctx sdk.Context, chainID uint64) {
 	sl := k.getStakerListNoCache(ctx, "", chainID)
-	if len(sl.StakerAddrs) > 0 {
-		k.c.SetNSTStakerList(chainID, sl.StakerAddrs)
+	if len(sl.Stakers) > 0 {
+		k.c.SetNSTStakerList(chainID, sl.Stakers)
 	}
 }
 
@@ -687,22 +689,53 @@ func UpdateNSTBalanceChange(ctx sdk.Context, rootHash []byte, rawData []byte, fe
 	}
 
 	sl := k.GetStakerList(ctx, "", chainID)
-	if len(sl.StakerAddrs) == 0 {
+	if len(sl.Stakers) == 0 {
 		return errors.New("staker list is empty")
 	}
 
 	cc, writeCache := ctx.CacheContext()
-	removedIndexes := make([]uint32, 0)
+	//	removedIndexes := make([]uint32, 0)
 	for _, changeKV := range balanceChanges.NstBalanceChanges {
-		stakerAddr := sl.StakerAddrs[changeKV.StakerIndex]
-		index, removed, balanceDelta, err := k.updateStaker(cc, chainID, roundID, changeKV.Balance, balanceChanges.Version, stakerAddr, "", types.Action_ACTION_SLASH_REFUND)
+		// stakerAddr := sl.StakerAddrs[changeKV.StakerIndex]
+		staker := sl.Stakers[changeKV.StakerIndex]
+		// staker has been cleared by 'withdraw' or 'zero-redeposit'
+		if staker.ActiveVersion == 0 || staker.ActiveVersion > balanceChanges.Version {
+			// skip if the staker is not active in this version
+			continue
+		}
+		stakerID := getStakerID(staker.StakerAddr, chainID)
+		stakerBalance, err := k.assetsKeeper.GetStakerBalanceByAsset(cc, stakerID, assetID)
+		if err != nil {
+			return err
+		}
+		// staker is changed to zero balance by imuachain slash, we need to clear it here and emit event to notify price feeder
+		if !stakerBalance.Balance.IsPositive() && staker.ActiveVersion > 0 {
+			// clear staker and skip update
+			index, cleared := k.clearStaker(cc, chainID, staker.StakerAddr)
+			if cleared && !ctx.IsCheckTx() {
+				eventValue := fmt.Sprintf("%s_%d_%s_%s_%d_%d_%d", types.AttributeValueNativeTokenDeposit, index, staker.StakerAddr, types.EmptyValidator, versions.Version.Version, 0, feederID)
+				if len(*k.cachedNSTStakersEventValue) > 0 {
+					*k.cachedNSTStakersEventValue += types.DelimiterForBase64
+				}
+				*k.cachedNSTStakersEventValue += eventValue
+			}
+			// skip balance update for this staker
+			continue
+		}
+
+		updatedIndex, cleared, balanceDelta, err := k.updateStaker(cc, chainID, roundID, changeKV.Balance, balanceChanges.Version, staker.StakerAddr, "", types.Action_ACTION_SLASH_REFUND)
 		if err != nil {
 			return err
 		}
 
-		if removed {
-			removedIndexes = append(removedIndexes, index)
+		if cleared && !ctx.IsCheckTx() {
+			eventValue := fmt.Sprintf("%s_%d_%s_%s_%d_%d_%d", types.AttributeValueNativeTokenDeposit, updatedIndex, staker.StakerAddr, types.EmptyValidator, versions.Version.Version, 0, feederID)
+			if len(*k.cachedNSTStakersEventValue) > 0 {
+				*k.cachedNSTStakersEventValue += types.DelimiterForBase64
+			}
+			*k.cachedNSTStakersEventValue += eventValue
 		}
+
 		if balanceDelta.IsZero() {
 			continue
 		}
@@ -711,13 +744,25 @@ func UpdateNSTBalanceChange(ctx sdk.Context, rootHash []byte, rawData []byte, fe
 		if err != nil {
 			return fmt.Errorf("failed to convert balance delta: %w", err)
 		}
-		if err := k.delegationKeeper.UpdateNSTBalance(cc, getStakerID(stakerAddr, chainID), assetID, balanceDeltaConverted); err != nil {
+		if err := k.delegationKeeper.UpdateNSTBalance(cc, stakerID, assetID, balanceDeltaConverted); err != nil {
 			return err
 		}
-	}
-
-	if err := k.removeStakerIndexes(cc, chainID, removedIndexes); err != nil {
-		return err
+		stakerBalance, err = k.assetsKeeper.GetStakerBalanceByAsset(cc, stakerID, assetID)
+		if err != nil {
+			return fmt.Errorf("failed to get staker balance by asset: %w", err)
+		}
+		if !stakerBalance.Balance.IsPositive() {
+			// if the staker balance is not positive, we need to clear it
+			index, cleared := k.clearStaker(cc, chainID, staker.StakerAddr)
+			if cleared && !ctx.IsCheckTx() {
+				// emit event for clearing staker
+				eventValue := fmt.Sprintf("%s_%d_%s_%s_%d_%d_%d", types.AttributeValueNativeTokenDeposit, index, staker.StakerAddr, types.EmptyValidator, versions.Version.Version, 0, feederID)
+				if len(*k.cachedNSTStakersEventValue) > 0 {
+					*k.cachedNSTStakersEventValue += types.DelimiterForBase64
+				}
+				*k.cachedNSTStakersEventValue += eventValue
+			}
+		}
 	}
 
 	_, newVersion, err := k.IncreaseVersionByFeed(cc, chainID)
@@ -725,7 +770,6 @@ func UpdateNSTBalanceChange(ctx sdk.Context, rootHash []byte, rawData []byte, fe
 		return err
 	}
 
-	// update all removed stakers' index
 	writeCache()
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeCreatePrice,

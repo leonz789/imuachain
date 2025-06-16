@@ -1,32 +1,45 @@
 package common
 
-import (
-	"fmt"
-	"slices"
-)
+import "github.com/imua-xyz/imuachain/x/oracle/types"
 
 type Caches struct {
-	nstStakerList map[uint64][]string
+	nstStakerList map[uint64][]*types.StakerListEntry
 }
 
 func NewCaches() *Caches {
 	return &Caches{
-		nstStakerList: make(map[uint64][]string),
+		nstStakerList: make(map[uint64][]*types.StakerListEntry),
 	}
 }
 
 func (c *Caches) ensureInitialized() {
 	if c.nstStakerList == nil {
-		c.nstStakerList = make(map[uint64][]string)
+		c.nstStakerList = make(map[uint64][]*types.StakerListEntry)
 	}
 }
 
-func (c *Caches) GetNSTStakerList(chainID uint64) []string {
+func (c *Caches) GetNSTStakerList(chainID uint64) []*types.StakerListEntry {
 	c.ensureInitialized()
 	return c.nstStakerList[chainID]
 }
 
-func (c *Caches) SetNSTStakerList(chainID uint64, sl []string) {
+func (c *Caches) ClearNSTStaker(chainID uint64, stakerIdx uint32) bool {
+	c.ensureInitialized()
+	sl := c.nstStakerList[chainID]
+	if sl == nil || int(stakerIdx) >= len(sl) {
+		return false
+	}
+	// Clear the staker at the given index
+	sl[stakerIdx] = &types.StakerListEntry{
+		StakerAddr:    sl[stakerIdx].StakerAddr,
+		ActiveVersion: 0,
+		LatestVersion: 0,
+	}
+	c.nstStakerList[chainID] = sl
+	return true
+}
+
+func (c *Caches) SetNSTStakerList(chainID uint64, sl []*types.StakerListEntry) {
 	c.ensureInitialized()
 	c.nstStakerList[chainID] = sl
 }
@@ -36,90 +49,41 @@ func (c *Caches) RemoveNSTStakerList(chainID uint64) {
 	delete(c.nstStakerList, chainID)
 }
 
+func (c *Caches) UpdateNSTStakerLatestVersion(chainID uint64, stakerIdx uint32, stakerAddr string, version uint64) bool {
+	c.ensureInitialized()
+	sl := c.nstStakerList[chainID]
+	if sl == nil || int(stakerIdx) >= len(sl) {
+		return false
+	}
+	if sl[stakerIdx].StakerAddr != stakerAddr {
+		return false
+	}
+	// Update the latest version if it's greater than the current one
+	if sl[stakerIdx].LatestVersion < version {
+		sl[stakerIdx].LatestVersion = version
+		c.nstStakerList[chainID] = sl
+		return true
+	}
+	return false
+}
+
 // AddNSTStaker adds a staker to the list for the given chainID at the specified index.
 // NOTE: not concurrent safe, caller must ensure synchronization.
-func (c *Caches) AddNSTStaker(chainID uint64, staker string, index uint32) bool {
+func (c *Caches) AddNSTStaker(chainID uint64, staker string, index uint32, activeVersion uint64) bool {
 	if c.nstStakerList == nil {
 		if index > 0 {
 			return false
 		}
-		c.nstStakerList = make(map[uint64][]string)
+		c.nstStakerList = make(map[uint64][]*types.StakerListEntry)
 	}
 	sl := c.nstStakerList[chainID]
 	if int(index) != len(sl) {
 		return false
 	}
-	c.nstStakerList[chainID] = append(sl, staker)
+	c.nstStakerList[chainID] = append(sl, &types.StakerListEntry{
+		StakerAddr:    staker,
+		ActiveVersion: activeVersion,
+		LatestVersion: activeVersion,
+	})
 	return true
-}
-
-func (c *Caches) RotateStakerList(chainID uint64, indexes []uint32) (map[uint32]string, error) {
-	c.ensureInitialized()
-	l := len(indexes)
-	if l == 0 {
-		return nil, nil
-	}
-	sl := c.nstStakerList[chainID]
-	l2 := len(sl)
-	if l2 == 0 {
-		return nil, fmt.Errorf("cannot remove stakers from empty list for chainID %d", chainID)
-	}
-	// Sort indexes in ascending order so we can safely remove from the end
-	slices.Sort(indexes)
-	// Remove duplicates from indexes
-	for i := 0; i < l-1; i++ {
-		if indexes[i] == indexes[i+1] {
-			indexes = slices.Delete(indexes, i, i+1)
-			l--
-			i--
-		}
-	}
-	// Validate all indexes are in range
-	if int(indexes[l-1]) >= l2 {
-		return nil, fmt.Errorf("remove index exceeds existing max index, max:%d, remove:%d", l2-1, indexes[l-1])
-	}
-	// ret will map removed index to the staker that replaced it (if any)
-	ret := make(map[uint32]string)
-	removeMap := make(map[uint32]bool)
-	for _, i := range indexes {
-		removeMap[i] = true
-	}
-	// The main loop: for each index to remove, swap in a staker from the end (if not also being removed), then truncate
-	i := 0
-	j := 1
-	for ; j <= l2 && j <= l; j++ {
-		// Skip if the end index is also being removed
-		// #nosec G115
-		if int(indexes[i]) < l2-j && removeMap[uint32(l2-j)] {
-			continue
-		}
-		// If the index to remove is now at the end, just truncate
-		if int(indexes[i]) == l2-j {
-			j++
-			break
-		}
-		// If the index to remove is before the end, swap in the last staker
-		if int(indexes[i]) > l2-j {
-			break
-		}
-		ret[indexes[i]] = sl[l2-j]
-		sl[indexes[i]] = sl[l2-j]
-		i++
-	}
-	// Truncate the slice to remove the last j elements
-	if j > l2 {
-		j = l2
-	} else if j > 0 {
-		j--
-	}
-	sl = sl[:l2-j]
-	if len(sl) == 0 {
-		delete(c.nstStakerList, chainID)
-	} else {
-		c.nstStakerList[chainID] = sl
-	}
-	if len(ret) == 0 {
-		ret = nil
-	}
-	return ret, nil
 }
