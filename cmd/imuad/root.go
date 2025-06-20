@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -134,27 +135,25 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 		addModuleInitFlags,
 	)
 	startCmd, _, _ := rootCmd.Find([]string{cmdStartName})
-	// TODO: tmp disable price feeder for dependency update
-	// startCmd.Flags().Bool(flagOracle, false, "enable oracle feeder")
-	// startCmd.Flags().String(flagFeederLogPath, "", "oracle feeder log file")
-	// startCmd.Flags().String(flagFeederMnemonic, "", "set validator consensus key's mnemonic")
-	// startCmd.Flags().String(flagFeederBinPath, "", "path to the price feeder binary")
+	startCmd.Flags().Bool(flagOracle, false, "enable oracle feeder")
+	startCmd.Flags().String(flagFeederLogPath, "", "oracle feeder log file")
+	startCmd.Flags().String(flagFeederMnemonic, "", "set validator consensus key's mnemonic")
+	startCmd.Flags().String(flagFeederBinPath, "", "path to the price feeder binary")
 	preRunE := startCmd.PreRunE
 	// add preRun to run price-feeder first before starting the node
 	startCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		// This needs to be re-enabled after the price feeder updates the EVMOS dependency to v16 and updates the Imuachain dependency
 		// to the version that includes this fix.
-		// TODO: tmp disable price feeder for dependency update
-		//		if enableFeeder, _ := cmd.Flags().GetBool(flagOracle); enableFeeder {
-		//			clientCtx := cmd.Context().Value(client.ClientContextKey).(*client.Context)
-		//			configFile := path.Join(clientCtx.HomeDir, confPath, confOracle)
-		//			sourcesConfPath := path.Join(clientCtx.HomeDir, confPath)
-		//			mnemonic, _ := cmd.Flags().GetString(flagFeederMnemonic)
-		//			binPath, _ := cmd.Flags().GetString(flagFeederBinPath)
-		//			logPath, _ := cmd.Flags().GetString(flagFeederLogPath)
-		//			serverCtx := sdkserver.GetServerContextFromCmd(cmd)
-		//			go launchFeeder(configFile, sourcesConfPath, binPath, mnemonic, serverCtx.Logger.With("module", "price-feeder"), logPath)
-		//		}
+		if enableFeeder, _ := cmd.Flags().GetBool(flagOracle); enableFeeder {
+			clientCtx := cmd.Context().Value(client.ClientContextKey).(*client.Context)
+			configFile := path.Join(clientCtx.HomeDir, confPath, confOracle)
+			sourcesConfPath := path.Join(clientCtx.HomeDir, confPath)
+			mnemonic, _ := cmd.Flags().GetString(flagFeederMnemonic)
+			binPath, _ := cmd.Flags().GetString(flagFeederBinPath)
+			logPath, _ := cmd.Flags().GetString(flagFeederLogPath)
+			serverCtx := sdkserver.GetServerContextFromCmd(cmd)
+			go launchFeeder(configFile, sourcesConfPath, binPath, mnemonic, serverCtx.Logger.With("module", "price-feeder"), logPath)
+		}
 		return preRunE(cmd, args)
 	}
 	// add keybase, auxiliary RPC, query, and tx child commands
@@ -162,8 +161,7 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 		rpc.StatusCommand(),
 		queryCommand(),
 		txCommand(),
-		// TODO: tmp disable price feeder for dependency update
-		//		externalCommand(),
+		externalCommand(),
 		evmosclient.KeyCommands(app.DefaultNodeHome),
 	)
 	rootCmd, err := srvflags.AddTxFlags(rootCmd)
