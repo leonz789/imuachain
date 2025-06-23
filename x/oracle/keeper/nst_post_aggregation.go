@@ -144,7 +144,6 @@ func (k Keeper) getStakerInfos(store sdk.KVStore, balancesKeyPrefix, key, value 
 	k.cdc.MustUnmarshal(value, staker)
 
 	var keyBalances []byte
-	fmt.Println("debug(leonz)--->key", string(key))
 	keyBalances = types.AppendMultiple(keyBalances, balancesKeyPrefix, key)
 	value = store.Get(keyBalances)
 

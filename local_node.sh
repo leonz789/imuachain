@@ -337,6 +337,7 @@ urls:
   eth: !!str https://eth-holesky.g.alchemy.com/v2/${ALCHEMY_API_KEY}
 nstid:
   !!str 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee_0x65
+bootstrap: !!str 0x38674073a3713dd2C46892f1d2C5Dadc5Bb14172
 EOF
 	)
 	# Write the YAML content to a file
