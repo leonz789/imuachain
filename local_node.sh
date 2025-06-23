@@ -319,6 +319,8 @@ imua:
   grpc: 127.0.0.1:9090
   ws: !!str ws://127.0.0.1:26657/websocket
   rpc: !!str http://127.0.0.1:26657
+status:
+  grpc: 50052
 #debugger:
 #  grpc: !!str :50051
 EOF
