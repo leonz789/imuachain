@@ -217,8 +217,8 @@ func (k Keeper) getStakerListNoCache(ctx sdk.Context, assetID string, chainID ui
 	}
 	store := ctx.KVStore(k.storeKey)
 	keyStakerAddrPrefix := types.NSTStakerAddrKeyChainIDPrefix(chainID)
-	store = prefix.NewStore(store, keyStakerAddrPrefix)
-	iterator := sdk.KVStorePrefixIterator(store, []byte{})
+	storePrefix := prefix.NewStore(store, keyStakerAddrPrefix)
+	iterator := sdk.KVStorePrefixIterator(storePrefix, []byte{})
 	defer iterator.Close()
 	stakerList := types.StakerList{
 		Stakers: make([]*types.StakerListEntry, 0),
@@ -274,10 +274,12 @@ func (k Keeper) GetStakerList(ctx sdk.Context, assetID string, chainID uint64) t
 // UpdateNSTValidatorListForStaker handles deposits from the assets module, updating the staker's validator list and balance.
 // Emits an event for the deposit and updates the version.
 func (k Keeper) UpdateNSTValidatorListForStaker(ctx sdk.Context, assetID, stakerID, validatorPubkey string, amount sdkmath.Int) error {
+	// zero value will cause no change, so we do not allow it
 	if amount.IsZero() {
 		return errors.New("amount should not be zero")
 	}
 	action := types.Action_ACTION_DEPOSIT
+	// if amount is negative, it means withdraw
 	if amount.LT(sdkmath.ZeroInt()) {
 		amount = amount.Neg()
 		action = types.Action_ACTION_WITHDRAW
