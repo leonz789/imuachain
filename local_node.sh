@@ -334,6 +334,7 @@ EOF
 		cat <<EOF
 urls:
   beaconchain: !!str https://ethereum-holesky-rpc.publicnode.com
+  beaconchain: !!str https://rpc.ankr.com/premium-http/eth_holesky_beacon/${ANKR_API_KEY}
   eth: !!str https://eth-holesky.g.alchemy.com/v2/${ALCHEMY_API_KEY}
 nstid:
   !!str 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee_0x65
