@@ -15,5 +15,7 @@ message Prices {
   // price list of all history round prices for the token
   repeated PriceTimeRound price_list = 3;
   // TWAP of the token
-  PriceTimeRound twap = 4;
+  PriceEpoch twap = 4;
+  // accumulated price of the token
+  PriceTimeRound accumulated_price = 5;
 }
