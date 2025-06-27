@@ -19054,7 +19054,7 @@
                       "properties": {
                         "epoch": {
                           "type": "string",
-                          "format": "uint64",
+                          "format": "int64",
                           "title": "epoch of the price"
                         },
                         "round_id": {
@@ -43898,7 +43898,7 @@
       "properties": {
         "epoch": {
           "type": "string",
-          "format": "uint64",
+          "format": "int64",
           "title": "epoch of the price"
         },
         "round_id": {
@@ -44058,7 +44058,7 @@
           "properties": {
             "epoch": {
               "type": "string",
-              "format": "uint64",
+              "format": "int64",
               "title": "epoch of the price"
             },
             "round_id": {
@@ -44623,7 +44623,7 @@
               "properties": {
                 "epoch": {
                   "type": "string",
-                  "format": "uint64",
+                  "format": "int64",
                   "title": "epoch of the price"
                 },
                 "round_id": {

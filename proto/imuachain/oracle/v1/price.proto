@@ -47,7 +47,7 @@ message PriceTimeRound {
 // price as twap with its epoch and roundid
 message PriceEpoch {
   // epoch of the price
-  uint64 epoch = 1;
+  int64 epoch = 1;
   // roundID of the first price in this epoch
   uint64 round_id = 2;
   // price with its corresponding source
