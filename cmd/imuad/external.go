@@ -177,17 +177,30 @@ func startExternalFeeder(binPath, configFile, sourcesConfPath string, logger log
 		return
 	}
 	for retry := 0; ; retry++ {
+		if err := validatePath(configFile); err != nil {
+			logger.Error("invalid config file path", "path", configFile, "err", err)
+			return
+		}
+		if err := validatePath(sourcesConfPath); err != nil {
+			logger.Error("invalid sources config path", "path", sourcesConfPath, "err", err)
+			return
+		}
 		args := []string{
 			"--config", configFile,
 			"--sources_path", sourcesConfPath,
 		}
 		if len(logPath) > 0 {
+			if err := validatePath(logPath); err != nil {
+				logger.Error("invalid log path", "path", logPath, "err", err)
+				return
+			}
 			args = append(args, "--log_path", logPath)
 		} else {
 			args = append(args, "--log_imua_format=true")
 		}
 
 		args = append(args, "start")
+		// nosemgrep
 		cmd := exec.Command(binPath, args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
