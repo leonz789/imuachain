@@ -269,7 +269,10 @@ func validateMnemonic(m string, required bool) error {
 	return nil
 }
 
-func validatePort(portStr string) error {
+func validatePort(portStr string, required bool) error {
+	if !required && (len(portStr) == 0 || portStr == "0") {
+		return nil
+	}
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
 		return fmt.Errorf("invalid port: %s, must be a number", portStr)
@@ -290,7 +293,7 @@ func validateFeederInputs(configFile, sourcesConfPath, logPath, mnemonic, status
 		{"sourcesConfPath", validatePath(sourcesConfPath)},
 		{"logPath", validatePath(logPath)},
 		{"mnemonic", validateMnemonic(mnemonic, false)},
-		{"statusPortStr", validatePort(statusPortStr)},
+		{"statusPortStr", validatePort(statusPortStr, false)},
 	}
 
 	for _, v := range validators {
