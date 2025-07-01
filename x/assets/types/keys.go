@@ -40,7 +40,7 @@ const (
 	prefixOperatorOptedInMiddlewareAssetInfo
 
 	// unused prefixes for backward compatibility
-	// originally: KeyPrefixReStakerImuachainAddr and Reverse
+	// originally: KeyPrefixReStakerImuaAddr and Reverse
 	_
 	_
 
@@ -63,7 +63,6 @@ var (
 	KeyPrefixReStakerAssetInfos = []byte{prefixRestakerAssetInfo}
 
 	// KeyPrefixOperatorAssetInfos key->value: operatorAddr+'/'+AssetID-> OperatorAssetInfo
-	// or operatorAddr->mapping(AssetID->OperatorAssetInfo) ?
 	KeyPrefixOperatorAssetInfos = []byte{prefixOperatorAssetInfo}
 
 	// KeyPrefixParams This is a key prefix for module parameter

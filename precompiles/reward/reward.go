@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
+	feedistribution "github.com/imua-xyz/imuachain/x/feedistribution/keeper"
+
 	"github.com/cometbft/cometbft/libs/log"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -16,7 +18,6 @@ import (
 	cmn "github.com/evmos/evmos/v16/precompiles/common"
 	imuacmn "github.com/imua-xyz/imuachain/precompiles/common"
 	assetskeeper "github.com/imua-xyz/imuachain/x/assets/keeper"
-	rewardkeeper "github.com/imua-xyz/imuachain/x/reward/keeper"
 )
 
 var _ vm.PrecompiledContract = &Precompile{}
@@ -29,15 +30,15 @@ var f embed.FS
 // Precompile defines the precompiled contract for reward.
 type Precompile struct {
 	cmn.Precompile
-	assetsKeeper assetskeeper.Keeper
-	rewardKeeper rewardkeeper.Keeper
+	assetsKeeper       assetskeeper.Keeper
+	distributionKeeper feedistribution.Keeper
 }
 
 // NewPrecompile creates a new reward Precompile instance as a
 // PrecompiledContract interface.
 func NewPrecompile(
 	stakingStateKeeper assetskeeper.Keeper,
-	rewardKeeper rewardkeeper.Keeper,
+	distributionKeeper feedistribution.Keeper,
 	authzKeeper authzkeeper.Keeper,
 ) (*Precompile, error) {
 	abiBz, err := f.ReadFile("abi.json")
@@ -59,8 +60,8 @@ func NewPrecompile(
 			ApprovalExpiration:   cmn.DefaultExpirationDuration, // should be configurable in the future.
 			Addr:                 common.HexToAddress("0x0000000000000000000000000000000000000806"),
 		},
-		rewardKeeper: rewardKeeper,
-		assetsKeeper: stakingStateKeeper,
+		distributionKeeper: distributionKeeper,
+		assetsKeeper:       stakingStateKeeper,
 	}, nil
 }
 
@@ -90,29 +91,51 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 	if p.IsTransaction(method.Name) {
 		cc, writeFunc = ctx.CacheContext()
 	}
-
-	var logError error
-
-	if method.Name == MethodReward {
-		bz, err = p.Reward(cc, evm.Origin, contract, stateDB, method, args)
-		if err != nil {
-			logError = err
-			bz, err = method.Outputs.Pack(false, new(big.Int))
-		}
-	} else {
-		// should never happen
-		return nil, fmt.Errorf(cmn.ErrUnknownMethod, method.Name)
+	var precompileCommonFunc imuacmn.PrecompileCommonTxFunc
+	switch method.Name {
+	case MethodClaimReward:
+		precompileCommonFunc = p.ClaimReward
+	case MethodWithdrawReward:
+		precompileCommonFunc = p.WithdrawReward
+	case MethodWithdrawIMUATokenReward:
+		precompileCommonFunc = p.WithdrawIMUATokenReward
+	case MethodWithdrawCommission:
+		precompileCommonFunc = p.WithdrawCommission
+	case MethodWithdrawIMUATokenCommission:
+		precompileCommonFunc = p.WithdrawIMUATokenCommission
+	case MethodRegisterRewardToken:
+		precompileCommonFunc = p.RegisterRewardToken
+	case MethodUpdateRewardToken:
+		precompileCommonFunc = p.UpdateRewardToken
+	case MethodSetAVSRewardDistribution:
+		precompileCommonFunc = p.SetAVSRewardDistribution
+	case MethodSetAVSEpochReward:
+		precompileCommonFunc = p.SetAVSEpochReward
+	case MethodSetOperatorRewardProportions:
+		precompileCommonFunc = p.SetOperatorRewardProportions
+	case MethodSetAVSRewardParams:
+		precompileCommonFunc = p.SetAVSRewardParams
+	case MethodFundAVSReward:
+		precompileCommonFunc = p.FundAVSReward
+	default:
+		return nil, fmt.Errorf("unsupported reward method %s", method.Name)
 	}
-
-	if logError != nil {
-		ctx.Logger().Error(
-			"return error when calling reward precompile",
-			"module", "reward precompile",
-			"method", method.Name,
-			"err", logError,
-		)
+	bz, err = precompileCommonFunc(cc, evm.Origin, contract, stateDB, method, args)
+	if err != nil {
+		ctx.Logger().Error("internal error when calling reward precompile", "module", "reward precompile", "method", method.Name, "err", err)
+		// for failed cases we expect it returns bool value instead of error
+		// this is a workaround because the error returned by precompile can not be caught in EVM
+		// see https://github.com/imua-xyz/imuachain/issues/70
+		// TODO: The pack value should be different by the method name, but it's fine currently.
+		// Because it should be removed when rebasing onto the PR that fixed the EVM issue.
+		bz, err = method.Outputs.Pack(false, new(big.Int))
 	} else {
 		writeFunc()
+	}
+
+	if err != nil {
+		ctx.Logger().Error("return error when calling reward precompile", "module", "reward precompile", "method", method.Name, "err", err)
+		return nil, err
 	}
 
 	cost := ctx.GasMeter().GasConsumed() - initialGas
@@ -127,7 +150,13 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz [
 // IsTransaction checks if the given methodName corresponds to a transaction or query.
 func (Precompile) IsTransaction(methodName string) bool {
 	switch methodName {
-	case MethodReward:
+	case MethodClaimReward, MethodWithdrawReward,
+		MethodWithdrawIMUATokenReward, MethodWithdrawCommission,
+		MethodWithdrawIMUATokenCommission,
+		MethodRegisterRewardToken, MethodUpdateRewardToken,
+		MethodSetAVSRewardDistribution, MethodSetAVSEpochReward,
+		MethodSetOperatorRewardProportions, MethodSetAVSRewardParams,
+		MethodFundAVSReward:
 		return true
 	default:
 		// this panic is safe to perform because the `init` function

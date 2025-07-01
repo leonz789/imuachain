@@ -163,6 +163,10 @@ func (p Precompile) TokenFromInputs(ctx sdk.Context, args []interface{}) (*asset
 		return nil, nil, err
 	}
 
+	if decimal > assetstypes.MaxDecimal {
+		return nil, nil, fmt.Errorf(imuacmn.ErrInvalidDecimal, decimal, assetstypes.MaxDecimal)
+	}
+
 	name, err := ta.GetRequiredString(3) // Must not be empty
 	if err != nil {
 		return nil, nil, err
