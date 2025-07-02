@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -244,9 +243,6 @@ func validatePath(p string, required bool) error {
 	}
 	if len(p) == 0 {
 		return errors.New("path is empty")
-	}
-	if !filepath.IsAbs(p) {
-		return fmt.Errorf("path %s must be absolute", p)
 	}
 	if strings.ContainsAny(p, "&|;$<>`\\\"'*?[]{}()~") {
 		return fmt.Errorf("invalid characters in path:%s", p)
