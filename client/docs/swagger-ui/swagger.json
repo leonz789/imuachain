@@ -18946,6 +18946,10 @@
                       "type": "integer",
                       "format": "int64",
                       "title": "piece_size_byte defines how many bytes one piece of raw data includes"
+                    },
+                    "epoch_identifier": {
+                      "type": "string",
+                      "title": "epoch_identifier defines the identifier for the epoch, which is used to calculate the TWAP"
                     }
                   }
                 }
@@ -19043,6 +19047,59 @@
                         "title": "price with its specified timestamp and roundid(if from deteministic source)"
                       },
                       "title": "price list of all history round prices for the token"
+                    },
+                    "twap": {
+                      "title": "TWAP of the token",
+                      "type": "object",
+                      "properties": {
+                        "epoch": {
+                          "type": "string",
+                          "format": "int64",
+                          "title": "epoch of the price"
+                        },
+                        "round_id": {
+                          "type": "string",
+                          "format": "uint64",
+                          "title": "roundID of the first price in this epoch"
+                        },
+                        "price": {
+                          "type": "string",
+                          "title": "price with its corresponding source"
+                        },
+                        "decimal": {
+                          "type": "integer",
+                          "format": "int32",
+                          "title": "decimal of the corresponding price"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "title": "timestamp when the price is corresponded"
+                        }
+                      }
+                    },
+                    "accumulated_price": {
+                      "type": "object",
+                      "properties": {
+                        "price": {
+                          "type": "string",
+                          "title": "price"
+                        },
+                        "decimal": {
+                          "type": "integer",
+                          "format": "int32",
+                          "title": "decimal of the corresponding price"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "title": "timestamp when the price is corresponded"
+                        },
+                        "round_id": {
+                          "type": "string",
+                          "format": "uint64",
+                          "title": "roundid of the price if the source is deteministic"
+                        }
+                      },
+                      "title": "price with its specified timestamp and roundid(if from deteministic source)"
                     }
                   }
                 }
@@ -19693,6 +19750,10 @@
                             "type": "integer",
                             "format": "int64",
                             "title": "piece_size_byte defines how many bytes one piece of raw data includes"
+                          },
+                          "epoch_identifier": {
+                            "type": "string",
+                            "title": "epoch_identifier defines the identifier for the epoch, which is used to calculate the TWAP"
                           }
                         },
                         "description": "Params defines the parameters for the module."
@@ -20065,6 +20126,10 @@
                           "type": "integer",
                           "format": "int64",
                           "title": "piece_size_byte defines how many bytes one piece of raw data includes"
+                        },
+                        "epoch_identifier": {
+                          "type": "string",
+                          "title": "epoch_identifier defines the identifier for the epoch, which is used to calculate the TWAP"
                         }
                       },
                       "description": "Params defines the parameters for the module."
@@ -20136,9 +20201,52 @@
               "type": "object",
               "properties": {
                 "version": {
-                  "type": "string",
-                  "format": "uint64",
-                  "title": "version of the staker validator list changes"
+                  "title": "version of the staker validator list changes",
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "title": "version of the nst info (on balance change, on deposit/withdraw)",
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "string",
+                          "format": "uint64",
+                          "title": "version of the nst info (on balance change, on deposit/withdraw)"
+                        },
+                        "deposit_amount": {
+                          "type": "string",
+                          "format": "uint64",
+                          "title": "accumulated deposit amount"
+                        }
+                      }
+                    },
+                    "feed_version": {
+                      "title": "version of the nst info (on balance change, on deposit/withdraw) based on which price-feeder should submit balance change",
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "string",
+                          "format": "uint64",
+                          "title": "version of the nst info (on balance change, on deposit/withdraw)"
+                        },
+                        "deposit_amount": {
+                          "type": "string",
+                          "format": "uint64",
+                          "title": "accumulated deposit amount"
+                        }
+                      }
+                    },
+                    "withdraw_version": {
+                      "type": "string",
+                      "format": "uint64",
+                      "title": "latest version to indicate the withdraw happened for this nst"
+                    },
+                    "feed_withdraw_version": {
+                      "type": "string",
+                      "format": "uint64",
+                      "title": "latest version to indicate the withdraw happened for this nst on price-feeder"
+                    }
+                  }
                 },
                 "staker_info": {
                   "title": "all staker infos under the specified asset",
@@ -20153,10 +20261,27 @@
                       "format": "int64",
                       "title": "the index of corresponding staker in staker list"
                     },
-                    "validator_pubkey_list": {
+                    "validator_list": {
                       "type": "array",
                       "items": {
-                        "type": "string"
+                        "type": "object",
+                        "properties": {
+                          "validator_pubkey": {
+                            "type": "string",
+                            "title": "validator's public key on beacon chain"
+                          },
+                          "version": {
+                            "type": "string",
+                            "format": "uint64",
+                            "title": "version of the validator info (on deposit)"
+                          },
+                          "deposit_amount": {
+                            "type": "string",
+                            "format": "uint64",
+                            "title": "deposit amount of the validator"
+                          }
+                        },
+                        "title": "ValidatorDeposit defines the version of a validator"
                       },
                       "title": "list of validators that this staker corresponding to on beacon chain"
                     },
@@ -20201,6 +20326,11 @@
                         "title": "BalanceInfo tells effective-balance for native-restaking asset"
                       },
                       "title": "list of balances to represets the history of this staker"
+                    },
+                    "withdraw_version": {
+                      "type": "string",
+                      "format": "uint64",
+                      "title": "latest version to indicate the withdraw happened for this staker"
                     }
                   }
                 }
@@ -20274,9 +20404,52 @@
               "type": "object",
               "properties": {
                 "version": {
-                  "type": "string",
-                  "format": "uint64",
-                  "title": "version of the staker validator list changes"
+                  "title": "version of the staker validator list changes",
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "title": "version of the nst info (on balance change, on deposit/withdraw)",
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "string",
+                          "format": "uint64",
+                          "title": "version of the nst info (on balance change, on deposit/withdraw)"
+                        },
+                        "deposit_amount": {
+                          "type": "string",
+                          "format": "uint64",
+                          "title": "accumulated deposit amount"
+                        }
+                      }
+                    },
+                    "feed_version": {
+                      "title": "version of the nst info (on balance change, on deposit/withdraw) based on which price-feeder should submit balance change",
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "string",
+                          "format": "uint64",
+                          "title": "version of the nst info (on balance change, on deposit/withdraw)"
+                        },
+                        "deposit_amount": {
+                          "type": "string",
+                          "format": "uint64",
+                          "title": "accumulated deposit amount"
+                        }
+                      }
+                    },
+                    "withdraw_version": {
+                      "type": "string",
+                      "format": "uint64",
+                      "title": "latest version to indicate the withdraw happened for this nst"
+                    },
+                    "feed_withdraw_version": {
+                      "type": "string",
+                      "format": "uint64",
+                      "title": "latest version to indicate the withdraw happened for this nst on price-feeder"
+                    }
+                  }
                 },
                 "staker_infos": {
                   "type": "array",
@@ -20292,10 +20465,27 @@
                         "format": "int64",
                         "title": "the index of corresponding staker in staker list"
                       },
-                      "validator_pubkey_list": {
+                      "validator_list": {
                         "type": "array",
                         "items": {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "validator_pubkey": {
+                              "type": "string",
+                              "title": "validator's public key on beacon chain"
+                            },
+                            "version": {
+                              "type": "string",
+                              "format": "uint64",
+                              "title": "version of the validator info (on deposit)"
+                            },
+                            "deposit_amount": {
+                              "type": "string",
+                              "format": "uint64",
+                              "title": "deposit amount of the validator"
+                            }
+                          },
+                          "title": "ValidatorDeposit defines the version of a validator"
                         },
                         "title": "list of validators that this staker corresponding to on beacon chain"
                       },
@@ -20340,6 +20530,11 @@
                           "title": "BalanceInfo tells effective-balance for native-restaking asset"
                         },
                         "title": "list of balances to represets the history of this staker"
+                      },
+                      "withdraw_version": {
+                        "type": "string",
+                        "format": "uint64",
+                        "title": "latest version to indicate the withdraw happened for this staker"
                       }
                     },
                     "title": "StakerInfo represents all related information for a staker of native-restaking"
@@ -20478,10 +20673,22 @@
                   "title": "staker list including all stakers of request asset",
                   "type": "object",
                   "properties": {
-                    "staker_addrs": {
+                    "stakers": {
                       "type": "array",
                       "items": {
-                        "type": "string"
+                        "type": "object",
+                        "properties": {
+                          "staker_addr": {
+                            "type": "string",
+                            "title": "staker's address"
+                          },
+                          "withdraw_version": {
+                            "type": "string",
+                            "format": "uint64",
+                            "title": "latest version to indicate the withdraw happened for this staker"
+                          }
+                        },
+                        "title": "StakerListEntry defines the entry of staker list"
                       },
                       "title": "list of staker's address"
                     }
@@ -43393,6 +43600,54 @@
       },
       "title": "n out of m required source"
     },
+    "imuachain.oracle.v1.NSTVersion": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "title": "version of the nst info (on balance change, on deposit/withdraw)",
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "string",
+              "format": "uint64",
+              "title": "version of the nst info (on balance change, on deposit/withdraw)"
+            },
+            "deposit_amount": {
+              "type": "string",
+              "format": "uint64",
+              "title": "accumulated deposit amount"
+            }
+          }
+        },
+        "feed_version": {
+          "title": "version of the nst info (on balance change, on deposit/withdraw) based on which price-feeder should submit balance change",
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "string",
+              "format": "uint64",
+              "title": "version of the nst info (on balance change, on deposit/withdraw)"
+            },
+            "deposit_amount": {
+              "type": "string",
+              "format": "uint64",
+              "title": "accumulated deposit amount"
+            }
+          }
+        },
+        "withdraw_version": {
+          "type": "string",
+          "format": "uint64",
+          "title": "latest version to indicate the withdraw happened for this nst"
+        },
+        "feed_withdraw_version": {
+          "type": "string",
+          "format": "uint64",
+          "title": "latest version to indicate the withdraw happened for this nst on price-feeder"
+        }
+      },
+      "title": "NSTVersion defines the version of native-staking token"
+    },
     "imuachain.oracle.v1.Params": {
       "type": "object",
       "properties": {
@@ -43637,9 +43892,42 @@
           "type": "integer",
           "format": "int64",
           "title": "piece_size_byte defines how many bytes one piece of raw data includes"
+        },
+        "epoch_identifier": {
+          "type": "string",
+          "title": "epoch_identifier defines the identifier for the epoch, which is used to calculate the TWAP"
         }
       },
       "description": "Params defines the parameters for the module."
+    },
+    "imuachain.oracle.v1.PriceEpoch": {
+      "type": "object",
+      "properties": {
+        "epoch": {
+          "type": "string",
+          "format": "int64",
+          "title": "epoch of the price"
+        },
+        "round_id": {
+          "type": "string",
+          "format": "uint64",
+          "title": "roundID of the first price in this epoch"
+        },
+        "price": {
+          "type": "string",
+          "title": "price with its corresponding source"
+        },
+        "decimal": {
+          "type": "integer",
+          "format": "int32",
+          "title": "decimal of the corresponding price"
+        },
+        "timestamp": {
+          "type": "string",
+          "title": "timestamp when the price is corresponded"
+        }
+      },
+      "title": "price as twap with its epoch and roundid"
     },
     "imuachain.oracle.v1.PriceSource": {
       "type": "object",
@@ -43770,6 +44058,59 @@
             "title": "price with its specified timestamp and roundid(if from deteministic source)"
           },
           "title": "price list of all history round prices for the token"
+        },
+        "twap": {
+          "title": "TWAP of the token",
+          "type": "object",
+          "properties": {
+            "epoch": {
+              "type": "string",
+              "format": "int64",
+              "title": "epoch of the price"
+            },
+            "round_id": {
+              "type": "string",
+              "format": "uint64",
+              "title": "roundID of the first price in this epoch"
+            },
+            "price": {
+              "type": "string",
+              "title": "price with its corresponding source"
+            },
+            "decimal": {
+              "type": "integer",
+              "format": "int32",
+              "title": "decimal of the corresponding price"
+            },
+            "timestamp": {
+              "type": "string",
+              "title": "timestamp when the price is corresponded"
+            }
+          }
+        },
+        "accumulated_price": {
+          "type": "object",
+          "properties": {
+            "price": {
+              "type": "string",
+              "title": "price"
+            },
+            "decimal": {
+              "type": "integer",
+              "format": "int32",
+              "title": "decimal of the corresponding price"
+            },
+            "timestamp": {
+              "type": "string",
+              "title": "timestamp when the price is corresponded"
+            },
+            "round_id": {
+              "type": "string",
+              "format": "uint64",
+              "title": "roundid of the price if the source is deteministic"
+            }
+          },
+          "title": "price with its specified timestamp and roundid(if from deteministic source)"
         }
       },
       "title": "prices of all rounds of a specific token"
@@ -44135,6 +44476,10 @@
                     "type": "integer",
                     "format": "int64",
                     "title": "piece_size_byte defines how many bytes one piece of raw data includes"
+                  },
+                  "epoch_identifier": {
+                    "type": "string",
+                    "title": "epoch_identifier defines the identifier for the epoch, which is used to calculate the TWAP"
                   }
                 },
                 "description": "Params defines the parameters for the module."
@@ -44278,6 +44623,59 @@
                 "title": "price with its specified timestamp and roundid(if from deteministic source)"
               },
               "title": "price list of all history round prices for the token"
+            },
+            "twap": {
+              "title": "TWAP of the token",
+              "type": "object",
+              "properties": {
+                "epoch": {
+                  "type": "string",
+                  "format": "int64",
+                  "title": "epoch of the price"
+                },
+                "round_id": {
+                  "type": "string",
+                  "format": "uint64",
+                  "title": "roundID of the first price in this epoch"
+                },
+                "price": {
+                  "type": "string",
+                  "title": "price with its corresponding source"
+                },
+                "decimal": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "decimal of the corresponding price"
+                },
+                "timestamp": {
+                  "type": "string",
+                  "title": "timestamp when the price is corresponded"
+                }
+              }
+            },
+            "accumulated_price": {
+              "type": "object",
+              "properties": {
+                "price": {
+                  "type": "string",
+                  "title": "price"
+                },
+                "decimal": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "decimal of the corresponding price"
+                },
+                "timestamp": {
+                  "type": "string",
+                  "title": "timestamp when the price is corresponded"
+                },
+                "round_id": {
+                  "type": "string",
+                  "format": "uint64",
+                  "title": "roundid of the price if the source is deteministic"
+                }
+              },
+              "title": "price with its specified timestamp and roundid(if from deteministic source)"
             }
           }
         }
@@ -44622,6 +45020,10 @@
                   "type": "integer",
                   "format": "int64",
                   "title": "piece_size_byte defines how many bytes one piece of raw data includes"
+                },
+                "epoch_identifier": {
+                  "type": "string",
+                  "title": "epoch_identifier defines the identifier for the epoch, which is used to calculate the TWAP"
                 }
               },
               "description": "Params defines the parameters for the module."
@@ -44897,6 +45299,10 @@
               "type": "integer",
               "format": "int64",
               "title": "piece_size_byte defines how many bytes one piece of raw data includes"
+            },
+            "epoch_identifier": {
+              "type": "string",
+              "title": "epoch_identifier defines the identifier for the epoch, which is used to calculate the TWAP"
             }
           }
         }
@@ -44907,9 +45313,52 @@
       "type": "object",
       "properties": {
         "version": {
-          "type": "string",
-          "format": "uint64",
-          "title": "version of the staker validator list changes"
+          "title": "version of the staker validator list changes",
+          "type": "object",
+          "properties": {
+            "version": {
+              "title": "version of the nst info (on balance change, on deposit/withdraw)",
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "string",
+                  "format": "uint64",
+                  "title": "version of the nst info (on balance change, on deposit/withdraw)"
+                },
+                "deposit_amount": {
+                  "type": "string",
+                  "format": "uint64",
+                  "title": "accumulated deposit amount"
+                }
+              }
+            },
+            "feed_version": {
+              "title": "version of the nst info (on balance change, on deposit/withdraw) based on which price-feeder should submit balance change",
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "string",
+                  "format": "uint64",
+                  "title": "version of the nst info (on balance change, on deposit/withdraw)"
+                },
+                "deposit_amount": {
+                  "type": "string",
+                  "format": "uint64",
+                  "title": "accumulated deposit amount"
+                }
+              }
+            },
+            "withdraw_version": {
+              "type": "string",
+              "format": "uint64",
+              "title": "latest version to indicate the withdraw happened for this nst"
+            },
+            "feed_withdraw_version": {
+              "type": "string",
+              "format": "uint64",
+              "title": "latest version to indicate the withdraw happened for this nst on price-feeder"
+            }
+          }
         },
         "staker_info": {
           "title": "all staker infos under the specified asset",
@@ -44924,10 +45373,27 @@
               "format": "int64",
               "title": "the index of corresponding staker in staker list"
             },
-            "validator_pubkey_list": {
+            "validator_list": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                  "validator_pubkey": {
+                    "type": "string",
+                    "title": "validator's public key on beacon chain"
+                  },
+                  "version": {
+                    "type": "string",
+                    "format": "uint64",
+                    "title": "version of the validator info (on deposit)"
+                  },
+                  "deposit_amount": {
+                    "type": "string",
+                    "format": "uint64",
+                    "title": "deposit amount of the validator"
+                  }
+                },
+                "title": "ValidatorDeposit defines the version of a validator"
               },
               "title": "list of validators that this staker corresponding to on beacon chain"
             },
@@ -44972,6 +45438,11 @@
                 "title": "BalanceInfo tells effective-balance for native-restaking asset"
               },
               "title": "list of balances to represets the history of this staker"
+            },
+            "withdraw_version": {
+              "type": "string",
+              "format": "uint64",
+              "title": "latest version to indicate the withdraw happened for this staker"
             }
           }
         }
@@ -44982,9 +45453,52 @@
       "type": "object",
       "properties": {
         "version": {
-          "type": "string",
-          "format": "uint64",
-          "title": "version of the staker validator list changes"
+          "title": "version of the staker validator list changes",
+          "type": "object",
+          "properties": {
+            "version": {
+              "title": "version of the nst info (on balance change, on deposit/withdraw)",
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "string",
+                  "format": "uint64",
+                  "title": "version of the nst info (on balance change, on deposit/withdraw)"
+                },
+                "deposit_amount": {
+                  "type": "string",
+                  "format": "uint64",
+                  "title": "accumulated deposit amount"
+                }
+              }
+            },
+            "feed_version": {
+              "title": "version of the nst info (on balance change, on deposit/withdraw) based on which price-feeder should submit balance change",
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "string",
+                  "format": "uint64",
+                  "title": "version of the nst info (on balance change, on deposit/withdraw)"
+                },
+                "deposit_amount": {
+                  "type": "string",
+                  "format": "uint64",
+                  "title": "accumulated deposit amount"
+                }
+              }
+            },
+            "withdraw_version": {
+              "type": "string",
+              "format": "uint64",
+              "title": "latest version to indicate the withdraw happened for this nst"
+            },
+            "feed_withdraw_version": {
+              "type": "string",
+              "format": "uint64",
+              "title": "latest version to indicate the withdraw happened for this nst on price-feeder"
+            }
+          }
         },
         "staker_infos": {
           "type": "array",
@@ -45000,10 +45514,27 @@
                 "format": "int64",
                 "title": "the index of corresponding staker in staker list"
               },
-              "validator_pubkey_list": {
+              "validator_list": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "object",
+                  "properties": {
+                    "validator_pubkey": {
+                      "type": "string",
+                      "title": "validator's public key on beacon chain"
+                    },
+                    "version": {
+                      "type": "string",
+                      "format": "uint64",
+                      "title": "version of the validator info (on deposit)"
+                    },
+                    "deposit_amount": {
+                      "type": "string",
+                      "format": "uint64",
+                      "title": "deposit amount of the validator"
+                    }
+                  },
+                  "title": "ValidatorDeposit defines the version of a validator"
                 },
                 "title": "list of validators that this staker corresponding to on beacon chain"
               },
@@ -45048,6 +45579,11 @@
                   "title": "BalanceInfo tells effective-balance for native-restaking asset"
                 },
                 "title": "list of balances to represets the history of this staker"
+              },
+              "withdraw_version": {
+                "type": "string",
+                "format": "uint64",
+                "title": "latest version to indicate the withdraw happened for this staker"
               }
             },
             "title": "StakerInfo represents all related information for a staker of native-restaking"
@@ -45085,10 +45621,22 @@
           "title": "staker list including all stakers of request asset",
           "type": "object",
           "properties": {
-            "staker_addrs": {
+            "stakers": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                  "staker_addr": {
+                    "type": "string",
+                    "title": "staker's address"
+                  },
+                  "withdraw_version": {
+                    "type": "string",
+                    "format": "uint64",
+                    "title": "latest version to indicate the withdraw happened for this staker"
+                  }
+                },
+                "title": "StakerListEntry defines the entry of staker list"
               },
               "title": "list of staker's address"
             }
@@ -45451,6 +45999,10 @@
               "type": "integer",
               "format": "int64",
               "title": "piece_size_byte defines how many bytes one piece of raw data includes"
+            },
+            "epoch_identifier": {
+              "type": "string",
+              "title": "epoch_identifier defines the identifier for the epoch, which is used to calculate the TWAP"
             }
           },
           "description": "Params defines the parameters for the module."
@@ -45570,10 +46122,27 @@
           "format": "int64",
           "title": "the index of corresponding staker in staker list"
         },
-        "validator_pubkey_list": {
+        "validator_list": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "validator_pubkey": {
+                "type": "string",
+                "title": "validator's public key on beacon chain"
+              },
+              "version": {
+                "type": "string",
+                "format": "uint64",
+                "title": "version of the validator info (on deposit)"
+              },
+              "deposit_amount": {
+                "type": "string",
+                "format": "uint64",
+                "title": "deposit amount of the validator"
+              }
+            },
+            "title": "ValidatorDeposit defines the version of a validator"
           },
           "title": "list of validators that this staker corresponding to on beacon chain"
         },
@@ -45618,6 +46187,11 @@
             "title": "BalanceInfo tells effective-balance for native-restaking asset"
           },
           "title": "list of balances to represets the history of this staker"
+        },
+        "withdraw_version": {
+          "type": "string",
+          "format": "uint64",
+          "title": "latest version to indicate the withdraw happened for this staker"
         }
       },
       "title": "StakerInfo represents all related information for a staker of native-restaking"
@@ -45625,15 +46199,42 @@
     "imuachain.oracle.v1.StakerList": {
       "type": "object",
       "properties": {
-        "staker_addrs": {
+        "stakers": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "staker_addr": {
+                "type": "string",
+                "title": "staker's address"
+              },
+              "withdraw_version": {
+                "type": "string",
+                "format": "uint64",
+                "title": "latest version to indicate the withdraw happened for this staker"
+              }
+            },
+            "title": "StakerListEntry defines the entry of staker list"
           },
           "title": "list of staker's address"
         }
       },
       "title": "StakerList defines the list of stakers"
+    },
+    "imuachain.oracle.v1.StakerListEntry": {
+      "type": "object",
+      "properties": {
+        "staker_addr": {
+          "type": "string",
+          "title": "staker's address"
+        },
+        "withdraw_version": {
+          "type": "string",
+          "format": "uint64",
+          "title": "latest version to indicate the withdraw happened for this staker"
+        }
+      },
+      "title": "StakerListEntry defines the entry of staker list"
     },
     "imuachain.oracle.v1.Token": {
       "type": "object",
@@ -45718,6 +46319,26 @@
       },
       "title": "TokenIndex is the pair of tokenName and its index defined in params"
     },
+    "imuachain.oracle.v1.ValidatorDeposit": {
+      "type": "object",
+      "properties": {
+        "validator_pubkey": {
+          "type": "string",
+          "title": "validator's public key on beacon chain"
+        },
+        "version": {
+          "type": "string",
+          "format": "uint64",
+          "title": "version of the validator info (on deposit)"
+        },
+        "deposit_amount": {
+          "type": "string",
+          "format": "uint64",
+          "title": "deposit amount of the validator"
+        }
+      },
+      "title": "ValidatorDeposit defines the version of a validator"
+    },
     "imuachain.oracle.v1.ValidatorUpdateBlock": {
       "type": "object",
       "properties": {
@@ -45728,6 +46349,22 @@
         }
       },
       "title": "ValidatorUpdateBlock"
+    },
+    "imuachain.oracle.v1.VersionDepositAmount": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "format": "uint64",
+          "title": "version of the nst info (on balance change, on deposit/withdraw)"
+        },
+        "deposit_amount": {
+          "type": "string",
+          "format": "uint64",
+          "title": "accumulated deposit amount"
+        }
+      },
+      "title": "VersionDepositAmount defines the version and deposit amount"
     },
     "imuachain.immint.v1.Params": {
       "type": "object",
