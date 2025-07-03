@@ -82,4 +82,18 @@ var (
 		ModuleName, 16,
 		"invalid imua receipt address",
 	)
+
+	ErrInvalidCommunityTax = errorsmod.Register(
+		ModuleName, 17,
+		"invalid community tax",
+	)
+
+	ErrInvalidCliCmdArg = errorsmod.Register(
+		ModuleName, 18,
+		"the input client command arguments are invalid",
+	)
+	ErrFailedToSplitRewards = errorsmod.Register(
+		ModuleName, 19,
+		"failed to split the rewards to multiple assets",
+	)
 )

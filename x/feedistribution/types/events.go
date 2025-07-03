@@ -8,6 +8,8 @@ const (
 	// EventTypeWithdrawRewards : withdraw the reward for a staker
 	EventTypeWithdrawRewards = "withdraw_rewards"
 
+	EventTypeWithdrawDogfoodRewards = "withdraw_dogfood_rewards"
+
 	// EventTypeWithdrawCommission :  withdraw the commission for an operator
 	EventTypeWithdrawCommission             = "withdraw_commission"
 	AttributeKeyAllAVSActualWithdrawAmounts = "all_avs_actual_withdraw_amounts"
@@ -50,13 +52,11 @@ const (
 	EventTypeAVSRewardParamSet = "avs_reward_param_set"
 	AttributeKeyAVSRewardParam = "avs_reward_param"
 
-	// EventTypeStakeChangedDelegationsSet : set the delegations with changed stake
-	EventTypeStakeChangedDelegationsSet = "stake_change_delegations_set"
-	AttributeKeyStakers                 = "stakers"
-	AttributeKeyPreDelegatedTotalAmount = "pre_delegated_total_amount"
-
-	// EventTypeStakeChangedDelegationsDelete : delete the delegations with changed stake by epoch
-	EventTypeStakeChangedDelegationsDelete = "stake_change_delegations_delete"
+	// EventTypeDistributeRewardToDelegations : distribute rewards to delegations with updated stake.
+	EventTypeDistributeRewardToDelegations = "distribute_reward_to_delegations"
 	AttributeKeyEpochIdentifier            = "epoch_identifier"
+	AttributeKeyEndingPeriod               = "ending_period"
+	AttributeKeyStakers                    = "stakers"
+	AttributeKeyPreDelegatedTotalAmount    = "pre_delegated_total_amount"
 	AttributeKeyEpochNumber                = "epoch_number"
 )

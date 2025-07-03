@@ -18,8 +18,8 @@ IReward constant REWARD_CONTRACT = IReward(
     }
 
 /// @dev The OperatorRewardProportion struct. it's equal to the OperatorRewardProportion in distribution.proto
-/// @param operator The operator address.
-/// @param amount The amount of the reward coin, it needs to be converted to decimal when using in native module.
+/// @param numerator The numerator of the reward proportion.
+/// @param denominator The denominator of the reward proportion.
     struct OperatorRewardProportion {
         string operator;
         uint256 numerator;
@@ -27,8 +27,8 @@ IReward constant REWARD_CONTRACT = IReward(
     }
 
 /// @dev The AVSRewardDistributionInfo struct. it's equal to the AVSRewardDistribution in distribution.proto
-/// @param operator The operator address.
-/// @param amount The amount of the reward coin, it needs to be converted to decimal when using in native module.
+/// @param rewardCoins The reward coins for the AVS.
+/// @param operatorRewardProportions The operator reward proportions for the AVS.
     struct AVSRewardDistributionInfo {
         RewardCoin[] rewardCoins;
         OperatorRewardProportion[] operatorRewardProportions;
@@ -59,12 +59,14 @@ interface IReward {
     /// @dev Withdraw the rewards earned from multiple AVSs (excluding the dogfood AVS) to the staker.
     /// This will update the outstanding reward state of the specified staker.
     /// Note that this address cannot be a module account.
+    /// @param doClaim indicates whether to claim reward before withdrawing
     /// @param clientChainLzID The LzID of the client chain the staker originates from
     /// @param rewardAssetChainLzID The LzID of the chain the reward asset originates from
     /// @param assetAddress The reward asset Address
     /// @param stakerAddress The address of the staker withdrawing the reward.
-    /// @param opAmount The reward amount
+    /// @param opAmount The reward amount to withdraw, set it to 0 to withdraw all rewards.
     function withdrawReward(
+        bool doClaim,
         uint32 clientChainLzID,
         uint32 rewardAssetChainLzID,
         bytes calldata assetAddress,
@@ -82,11 +84,13 @@ interface IReward {
     /// `actualWithdrawAmount` and `withdrawAmountFromDogfood`. The difference between them indicates the amount
     /// that remains to be claimed from the contract vault.
     /// Note that this address cannot be a module account.
+    /// @param doClaim indicates whether to claim reward before withdrawing
     /// @param clientChainLzID The LzID of the client chain the staker originates from
     /// @param stakerAddress The address of the staker withdrawing the reward.
     /// @param receiptAddress The address to receive the IMUA reward. It should be an EVM address.
-    /// @param opAmount The reward amount
+    /// @param opAmount The reward amount, set it to 0 to withdraw all rewards.
     function withdrawIMUATokenReward(
+        bool doClaim,
         uint32 clientChainLzID,
         bytes calldata stakerAddress,
         bytes calldata receiptAddress,
@@ -99,7 +103,7 @@ interface IReward {
     /// @param rewardAssetChainLzID The LzID of the chain the commission asset originates from
     /// @param assetAddress The commission asset Address
     /// @param operatorAddress The address of the operator withdrawing the commission.
-    /// @param opAmount The commission amount
+    /// @param opAmount The commission amount to withdraw, set it to 0 to withdraw all commissions.
     function withdrawCommission(
         uint32 rewardAssetChainLzID,
         bytes calldata assetAddress,
@@ -113,7 +117,7 @@ interface IReward {
     /// @param operatorAddress The address of the operator withdrawing the commission.
     /// @param receiptAddress The address to receive the IMUA reward. It can be same as the operator address
     /// The recipient and operator addresses should be of EVM address type
-    /// @param opAmount The commission amount
+    /// @param opAmount The commission amount to withdraw, set it to 0 to withdraw all commissions.
     function withdrawIMUATokenCommission(
         bytes calldata operatorAddress,
         bytes calldata receiptAddress,
@@ -200,4 +204,16 @@ interface IReward {
         bytes calldata assetAddress,
         uint256 opAmount
     ) external returns (bool success);
+
+
+    /// QUERIES
+    /// @dev Checks if the reward token is registered, given the chain ID and token address.
+    /// @param clientChainID is the layerZero chainID where the reward token is located.
+    /// @param token is the address of reward token.
+    /// @return success true if the query is successful
+    /// @return isRegistered true if the client chain is registered
+    function isRegisteredRewardToken(
+        uint32 clientChainID,
+        bytes calldata token
+    ) external view returns (bool success, bool isRegistered);
 }

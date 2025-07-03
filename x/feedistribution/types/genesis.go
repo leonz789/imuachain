@@ -26,6 +26,7 @@ const (
 	EpochIdentifier
 	PeriodHexStr
 	EpochNumberHexStr
+	BlockHeightHexStr
 )
 
 var IMUARewardToken = AVSRewardAsset{
@@ -46,8 +47,8 @@ var IMUARewardToken = AVSRewardAsset{
 
 // DefaultGenesis returns the default genesis state
 func DefaultGenesis() *GenesisState {
-	// Use the test chain ID to generate the dogfood address, so the default genesis is used for testnet.
-	// The AVS address in the genesis file must be updated either manually or via a script when used for mainnet.
+	// Use the default chain ID to generate the dogfood address, the current default genesis is used for mainnet.
+	// The AVS address in the genesis file should be updated either manually or via a script when used for testnet.
 	avsAddrStr := avstypes.GenerateAVSAddress(avstypes.ChainIDWithoutRevision(utils.DefaultChainID))
 	return &GenesisState{
 		// this line is used by starport scaffolding # genesis/types/default
@@ -134,6 +135,11 @@ func CheckJoinedKey(joinedKey string, keyNumber int, keyTypes []KeyTypeForJoined
 			if err != nil {
 				return xerrors.Errorf("invalid epoch number, err:%s,epochNumberHexStr:%s, key:%s", err, keys[index], joinedKey)
 			}
+		case BlockHeightHexStr:
+			err = CheckUint64BigEndianHexStr(keys[index])
+			if err != nil {
+				return xerrors.Errorf("invalid block height, err:%s,BlockHeightHexStr:%s, key:%s", err, keys[index], joinedKey)
+			}
 		}
 	}
 	return nil
@@ -217,6 +223,8 @@ func (gs GenesisState) ValidateAVSRewardAssets() error {
 func (gs GenesisState) ValidateAVSRewardParams() error {
 	validationFunc := func(_ int, info AVSAddrAndRewardParam) error {
 		// check the avs address
+		// Case sensitivity is not a concern here, as the AVS address is decoded into bytes
+		// before being used as the key in the store
 		if !common.IsHexAddress(info.Avs) {
 			return ErrInvalidGenesisData.Wrapf("ValidateAVSRewardParams: invalid avs address, avsAddr:%s", info.Avs)
 		}
@@ -235,6 +243,8 @@ func (gs GenesisState) ValidateAVSRewardParams() error {
 func (gs GenesisState) ValidateAVSFeePools() error {
 	validationFunc := func(_ int, info AVSAddrAndFeePool) error {
 		// check the avs address
+		// Case sensitivity is not a concern here, as the AVS address is decoded into bytes
+		// before being used as the key in the store
 		if !common.IsHexAddress(info.Avs) {
 			return ErrInvalidGenesisData.Wrapf("ValidateAVSFeePools: invalid avs address, avsAddr:%s", info.Avs)
 		}
@@ -257,6 +267,8 @@ func (gs GenesisState) ValidateAVSRewardDistributions() error {
 	validationFunc := func(_ int, info AVSAddrAndRewardDistribution) error {
 		totalProportion := sdkmath.LegacyZeroDec()
 		// check the avs address
+		// Case sensitivity is not a concern here, as the AVS address is decoded into bytes
+		// before being used as the key in the store
 		if !common.IsHexAddress(info.Avs) {
 			return ErrInvalidGenesisData.Wrapf("ValidateAVSRewardDistributions: invalid avs address, avsAddr:%s", info.Avs)
 		}
@@ -522,8 +534,8 @@ func (gs GenesisState) ValidateOperatorAccumulatedCommissions() error {
 func (gs GenesisState) ValidateOperatorSlashEvents() error {
 	validationFunc := func(_ int, info KeyAndOperatorSlashEvent) error {
 		// check the joined key
-		err := CheckJoinedKey(info.Key, 4,
-			[]KeyTypeForJoinedKey{OperatorAddr, AssetID, EpochIdentifier, EpochNumberHexStr})
+		err := CheckJoinedKey(info.Key, 5,
+			[]KeyTypeForJoinedKey{OperatorAddr, AssetID, EpochIdentifier, EpochNumberHexStr, BlockHeightHexStr})
 		if err != nil {
 			return ErrInvalidGenesisData.Wrapf("ValidateOperatorSlashEvents: failed to check the joined key, err:%s", err)
 		}

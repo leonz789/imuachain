@@ -44,10 +44,10 @@ type expectedDelegationRewardStates struct {
 }
 
 func (suite *KeeperTestSuite) checkDelegationStates(expectedStates *expectedDelegationRewardStates) {
-	// checkDelegationStates the states related to the operator asset
+	// check the states related to the operator asset
 	for operator, assetsState := range expectedStates.OperatorAssetStates {
 		for assetID, operatorAssetState := range assetsState {
-			// checkDelegationStates the delegation starting info
+			// check the delegation starting info
 			for stakerID, delegationStartingInfo := range operatorAssetState.DelegationStartingInfos {
 				delegationKey := string(assetstype.GetJoinedStoreKey(stakerID, assetID, operator))
 				actualStartingInfo, err := suite.App.DistrKeeper.GetDelegationStartingInfo(suite.Ctx, delegationKey, expectedStates.EpochIdentifier)
@@ -283,7 +283,7 @@ func (suite *KeeperTestSuite) TestMarkChangedDelegations() {
 			}
 
 			args, expectedStates := tc.malleate()
-			// checkDelegationStates the state after unit test
+			// check the state after unit test
 			for epochIdentifier, expectedState := range expectedStates {
 				actualState, err := suite.App.DistrKeeper.GetStakeChangedDelegations(suite.Ctx, epochIdentifier, args.operator.String(), args.assetID)
 				if expectedState != nil {
@@ -726,7 +726,7 @@ func (suite *KeeperTestSuite) TestDistributeRewardsToDelegations() {
 			suite.updateDogfoodAssetsList(suite.AssetIDs)
 
 			expectedStates := tc.malleate()
-			// checkDelegationStates the state after unit test
+			// check the state after unit test
 			suite.checkDelegationStates(&expectedStates)
 		})
 	}
@@ -866,7 +866,7 @@ func (suite *KeeperTestSuite) TestClaimDelegationRewards() {
 			} else if tc.errContains != "" {
 				s.Require().ErrorContains(err, tc.errContains)
 			}
-			// checkDelegationStates the state after unit test
+			// check the state after unit test
 			suite.checkDelegationStates(&expectedStates)
 
 			suite.Require().Equal(feedistributiontypes.CommonAVSRewards{
@@ -915,9 +915,9 @@ func (suite *KeeperTestSuite) TestSlashedDelegationRewards() {
 				suite.RunToEpochEnd(dogfoodtypes.DefaultEpochIdentifier)
 
 				slashFactor := suite.App.SlashingKeeper.SlashFractionDowntime(suite.Ctx)
-
 				slashType := stakingtypes.Infraction_INFRACTION_DOWNTIME
-				suite.App.OperatorKeeper.SlashWithInfractionReason(suite.Ctx, suite.Operators[0], suite.Ctx.BlockHeight(), operatorPower, slashFactor, slashType)
+				slashBlockHeight := suite.Ctx.BlockHeight()
+				suite.App.OperatorKeeper.SlashWithInfractionReason(suite.Ctx, suite.Operators[0], slashBlockHeight, operatorPower, slashFactor, slashType)
 				suite.RunToEpochEnd(dogfoodtypes.DefaultEpochIdentifier)
 
 				// undelegate to claim the reward
@@ -961,7 +961,8 @@ func (suite *KeeperTestSuite) TestSlashedDelegationRewards() {
 				rewardForEpoch2And3 := rewardRatioForEpoch2And3.Rewards.MulDecTruncate(stakerTotalStake)
 
 				epochNumberHexStr := hexutil.Encode(sdk.Uint64ToBigEndian(2))
-				slashEventkey := assetstype.GetJoinedStoreKey(suite.Operators[0].String(), suite.AssetIDs[0], dogfoodtypes.DefaultEpochIdentifier, epochNumberHexStr)
+				blockHeightHexStr := hexutil.Encode(sdk.Uint64ToBigEndian(uint64(slashBlockHeight)))
+				slashEventkey := assetstype.GetJoinedStoreKey(suite.Operators[0].String(), suite.AssetIDs[0], dogfoodtypes.DefaultEpochIdentifier, epochNumberHexStr, blockHeightHexStr)
 				commonStates := expectedDelegationRewardStates{
 					AvsAddr:         suite.DogfoodAVSAddr,
 					EpochIdentifier: dogfoodtypes.DefaultEpochIdentifier,
@@ -1020,7 +1021,7 @@ func (suite *KeeperTestSuite) TestSlashedDelegationRewards() {
 			s.testClientChainID = s.ClientChains[0].LayerZeroChainID
 			expectedStates := tc.malleate()
 
-			// checkDelegationStates the state after unit test
+			// check the state after unit test
 			suite.checkDelegationStates(&expectedStates.commonStates)
 			// check the slash states
 			allSlashEvents, err := suite.App.DistrKeeper.GetAllOperatorSlashEvent(suite.Ctx)

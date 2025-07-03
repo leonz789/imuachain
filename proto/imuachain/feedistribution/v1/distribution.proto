@@ -19,7 +19,7 @@ message AVSRewardParam {
   // custom_reward_inflation is the flag to determine whether customizing the reward inflation
   // by the precompile contract
   bool custom_reward_inflation = 1;
-  // custom_reward_inflation is the flag to determine whether customizing the operator reward
+  // custom_operator_ratio is the flag to determine whether customizing the operator reward
   // proportions by the precompile contract
   bool custom_operator_ratio = 2;
 }
@@ -70,7 +70,7 @@ message CommonAVSRewardData {
 }
 // OperatorHistoricalRewards represents historical rewards for an operator.
 // Operator, assetID, epochIdentifier and period are implicit within the store key.
-// Cumulative reward ratio is the sum from the zeroeth period
+// Cumulative reward ratio is the sum from the zero period
 // until this period of rewards / tokens, per the spec.
 // The reference count indicates the number of objects
 // which might need to reference this historical entry at any point.
@@ -218,7 +218,7 @@ message OperatorSlashEvent {
 }
 
 // FeePool is the global fee pool for distribution.
-// It holds decimal coins. Once whole those coins can be burned or distributed to the community pool.
+// It records the rewards accumulated for the community from an AVS.
 // The AVS address is implicit within the store key.
 message FeePool {
   // global fee pool for distribution.
@@ -274,5 +274,5 @@ message AVSRewardAsset {
 // AVSRewardAssets represents all reward assets of an AVS
 message AVSRewardAssets {
   // avs_reward_assets is a list of all reward asset for an AVS
-  repeated AVSRewardAsset avs_reward_assets = 1;
+  repeated AVSRewardAsset avs_reward_assets = 1 [(gogoproto.nullable) = false];
 }

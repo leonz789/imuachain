@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	sdkmath "cosmossdk.io/math"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
@@ -69,7 +71,7 @@ func (k Keeper) SetAVSRewardAssets(ctx sdk.Context, avsAddr string, assets []ass
 	assetStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAVSRewardAssets)
 	symbolStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAVSRewardAssetBySymbol)
 	symbolMap := make(map[string]interface{}, len(assets))
-	// checkDelegationStates if the AVS is registered
+	// check if the AVS is registered
 	if isAVS, _ := k.avsKeeper.IsAVS(ctx, avsAddr); !isAVS {
 		return types.ErrInvalidRewardAssetParameter.Wrapf("AVS not found %s", avsAddr)
 	}
@@ -77,7 +79,7 @@ func (k Keeper) SetAVSRewardAssets(ctx sdk.Context, avsAddr string, assets []ass
 		if assetInfo.Decimals > assetstype.MaxDecimal {
 			return types.ErrInvalidRewardAssetParameter.Wrapf("the decimal is greater than the MaxDecimal,decimal:%v,MaxDecimal:%v", assetInfo.Decimals, assetstype.MaxDecimal)
 		}
-		// checkDelegationStates for symbol duplication
+		// check for symbol duplication
 		if _, ok := symbolMap[assetInfo.Symbol]; ok {
 			return types.ErrInvalidRewardAssetParameter.Wrapf("duplicated symbol: %s", assetInfo.Symbol)
 		}
@@ -135,7 +137,7 @@ func (k Keeper) IsAVSAllRewardsClaimed(ctx sdk.Context, avsAddr string) bool {
 	for ; iterator.Valid(); iterator.Next() {
 		var avsRewardAsset types.AVSRewardAsset
 		k.cdc.MustUnmarshal(iterator.Value(), &avsRewardAsset)
-		// checkDelegationStates if the reward has been distributed and claimed
+		// check if the reward has been distributed and claimed
 		claimedAmount := avsRewardAsset.RewardAssetState.RewardPoolTotal.Sub(avsRewardAsset.RewardAssetState.RewardPoolBalance)
 		if !avsRewardAsset.RewardAssetState.RewardAllocationTotal.Equal(claimedAmount) {
 			return false
@@ -222,15 +224,18 @@ func (k Keeper) UpdateAVSRewardAssetMetaInfo(ctx sdk.Context, avsAddr, assetID s
 }
 
 func (k Keeper) GetAllRewardAssetsByAVS(ctx sdk.Context, avsAddr string) (allRewardAssets types.AVSRewardAssets, err error) {
+	if !common.IsHexAddress(avsAddr) {
+		return types.AVSRewardAssets{}, types.ErrInvalidInputParameter.Wrapf("Invalid AVS address: must be a valid EVM hexadecimal address, avsAddr:%s", avsAddr)
+	}
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAVSRewardAssets)
 	iterator := sdk.KVStorePrefixIterator(store, []byte(avsAddr))
 	defer iterator.Close()
 
-	ret := make([]*types.AVSRewardAsset, 0)
+	ret := make([]types.AVSRewardAsset, 0)
 	for ; iterator.Valid(); iterator.Next() {
 		var avsRewardAsset types.AVSRewardAsset
 		k.cdc.MustUnmarshal(iterator.Value(), &avsRewardAsset)
-		ret = append(ret, &avsRewardAsset)
+		ret = append(ret, avsRewardAsset)
 	}
 	return types.AVSRewardAssets{
 		AvsRewardAssets: ret,
@@ -238,6 +243,9 @@ func (k Keeper) GetAllRewardAssetsByAVS(ctx sdk.Context, avsAddr string) (allRew
 }
 
 func (k Keeper) GetAllAVSRewardAssetSymbols(ctx sdk.Context, avsAddr string) (symbols []string, err error) {
+	if !common.IsHexAddress(avsAddr) {
+		return nil, types.ErrInvalidInputParameter.Wrapf("Invalid AVS address: must be a valid EVM hexadecimal address, avsAddr:%s", avsAddr)
+	}
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAVSRewardAssets)
 	iterator := sdk.KVStorePrefixIterator(store, []byte(avsAddr))
 	defer iterator.Close()
@@ -304,4 +312,20 @@ func (k Keeper) GetAllAVSRewardAssets(ctx sdk.Context) ([]types.AVSAddrAndReward
 		ret[avsNumber-1].AvsRewardAssets = append(ret[avsNumber-1].AvsRewardAssets, rewardAsset)
 	}
 	return ret, nil
+}
+
+func (k Keeper) IsRegisteredRewardAsset(ctx sdk.Context, assetID string) bool {
+	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAVSRewardAssets)
+	iterator := sdk.KVStorePrefixIterator(store, []byte{})
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		keys, err := assetstype.ParseJoinedStoreKey(iterator.Key(), 2)
+		if err != nil {
+			return false
+		}
+		if keys[1] == assetID {
+			return true
+		}
+	}
+	return false
 }

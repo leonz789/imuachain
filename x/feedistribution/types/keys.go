@@ -1,8 +1,6 @@
 package types
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/address"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -70,7 +68,7 @@ var (
 
 	// KeyPrefixFeePools :
 	// avsAddr -> types.FeePool
-	// Key for the fee pools of all AVSs; it will track multiple reward pools for different AVSs,
+	// Key for the fee pools of all AVSs; it will track multiple community reward pools for different AVSs,
 	// unlike the cosmos-sdk.
 	KeyPrefixFeePools = []byte{prefixFeePools}
 
@@ -123,7 +121,7 @@ var (
 	KeyPrefixOperatorAccumulatedCommission = []byte{prefixOperatorAccumulatedCommission}
 
 	// KeyPrefixOperatorSlashEvent :
-	// operator + '/' + assetID  + epochIdentifier + '/' + epochNumber -> OperatorSlashEvent
+	// operator + '/' + assetID + '/' + epochIdentifier + '/' + epochNumber + '/' + blockHeight-> OperatorSlashEvent
 	// key for operator slash fraction, the periods of different epochs will differ when a
 	// slash event occurs, so the slash event should be recorded for all epochs.
 	// todo: We defer implementing the deletion mechanism, as the expected number of slash events
@@ -162,18 +160,3 @@ var (
 	// addressed when distributing Imua rewards to stakers with address incompatibility on the chain.
 	KeyPrefixDelegatorWithdrawAddr = []byte{prefixDelegatorWithdrawAddr}
 )
-
-// GetOperatorAccumulatedCommissionKey creates the key for a validator's current commission.
-func GetOperatorAccumulatedCommissionKey(v sdk.ValAddress) []byte {
-	return append(KeyPrefixOperatorAccumulatedCommission, address.MustLengthPrefix(v.Bytes())...)
-}
-
-// GetOperatorOutstandingRewardsKey creates the outstanding rewards key for a validator.
-func GetOperatorOutstandingRewardsKey(valAddr sdk.ValAddress) []byte {
-	return append(KeyPrefixOperatorOutstandingRewards, address.MustLengthPrefix(valAddr.Bytes())...)
-}
-
-// GetStakerOutstandingRewardsKey creates the outstanding rewards key for the staker.
-func GetStakerOutstandingRewardsKey(staker string) []byte {
-	return append(KeyPrefixStakerOutstandingRewards, address.MustLengthPrefix([]byte(staker))...)
-}
