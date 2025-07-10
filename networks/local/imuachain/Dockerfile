@@ -1,5 +1,5 @@
 FROM golang:1.23.11-alpine3.21 AS build
-RUN apk add --no-cache build-base=0.5-r3 git=2.47.3-r0 linux-headers=6.6-r1
+RUN apk add --no-cache build-base=~0.5 git=~2.47.3 linux-headers=~6.6
 # Set working directory for the build
 WORKDIR /go/work
 # Add source files
@@ -11,10 +11,10 @@ RUN LEDGER_ENABLED=false make build
 #####################################
 FROM alpine:3.21 AS run
 RUN apk add --no-cache \
-    libstdc++=14.2.0-r4 \
-    bash=5.2.37-r0 \
-    curl=8.12.1-r1 \
-    jq=1.7.1-r0 \
+    libstdc++=~14.2.0 \
+    bash=~5.2.37 \
+    curl=~8.12.1 \
+    jq=~1.7.1 \
  && addgroup -g 1000 imua \
  && adduser -S -h /home/imua -D imua -u 1000 -G imua
 EXPOSE 26656 26657 1317 9090 8545 8546
