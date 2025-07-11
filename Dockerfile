@@ -16,7 +16,7 @@ COPY . .
 
 RUN make build && go install github.com/MinseokOh/toml-cli@latest
 
-FROM alpine:3.19
+FROM alpine:3.21
 
 WORKDIR /root
 
@@ -25,10 +25,10 @@ COPY --from=build-env /go/bin/toml-cli /usr/bin/toml-cli
 
 RUN apk add --no-cache \
 	ca-certificates=~20241121 \
-	libstdc++=~13.2 \
-	jq=~1.7 \
+	libstdc++=~14.20 \
+	jq=~1.7.1 \
 	curl=~8.12.1 \
-	bash=~5.2 \
+	bash=~5.2.37 \
     && addgroup -g 1000 imua \
     && adduser -S -h /home/imua -D imua -u 1000 -G imua
 
