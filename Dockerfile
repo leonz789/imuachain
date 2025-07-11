@@ -25,7 +25,7 @@ COPY --from=build-env /go/bin/toml-cli /usr/bin/toml-cli
 
 RUN apk add --no-cache \
 	ca-certificates=~20241121 \
-	libstdc++=~14.20 \
+	libstdc++=~14.2.0 \
 	jq=~1.7.1 \
 	curl=~8.12.1 \
 	bash=~5.2.37 \
