@@ -322,7 +322,6 @@ func (f *FeederManager) processRound(ctx sdk.Context, feederID, height int64, lo
 		r.status = roundStatusClosed
 		if !f.cs.IsRuleV1(r.feederID) {
 			logger.Error("We currently only support rules under oracle V1", "feederID", r.feederID)
-			tf := f.cs.params.params.TokenFeeders
 			return success
 		}
 
