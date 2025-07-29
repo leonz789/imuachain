@@ -70,9 +70,10 @@ func DefaultParams() Params {
 				Name: "0 position is reserved",
 			},
 			{
-				Name:  "Chainlink",
-				Entry: &Endpoint{},
-				Valid: true,
+				Name:          "Chainlink",
+				Entry:         &Endpoint{},
+				Valid:         true,
+				Deterministic: true,
 			},
 		},
 		// rules defines price from which sources are accepted, could be used to proof malicious
