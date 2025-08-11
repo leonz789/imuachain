@@ -687,10 +687,10 @@ func (k Keeper) GetValidatorByConsAddrForChainID(
 		return types.Validator{}, false
 	}
 	prices, err := k.oracleKeeper.GetMultipleAssetsPrices(ctx, assets)
-	// TODO: for now, we ignore the error when the price round is not found and set the price to 1 to avoid panic
 	if err != nil {
 		// don't panic for missing prices, we just log the error
 		ctx.Logger().Error("fail to get some prices from oracle", "details:", err)
+		return types.Validator{}, false
 	}
 
 	ret := types.OperatorStakingInfo{
