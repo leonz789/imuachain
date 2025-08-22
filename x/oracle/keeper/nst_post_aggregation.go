@@ -433,10 +433,19 @@ func (k Keeper) GetNSTVersions(ctx sdk.Context, chainID uint64) (types.NSTVersio
 	key := types.NSTVersionKey(chainID)
 	value := store.Get(key)
 	if value == nil {
-		return types.NSTVersion{}, false
+		return types.NSTVersion{
+			Version:     &types.VersionDepositAmount{},
+			FeedVersion: &types.VersionDepositAmount{},
+		}, false
 	}
 	var v types.NSTVersion
 	k.cdc.MustUnmarshal(value, &v)
+	if v.Version == nil {
+		v.Version = &types.VersionDepositAmount{}
+	}
+	if v.FeedVersion == nil {
+		v.FeedVersion = &types.VersionDepositAmount{}
+	}
 	return v, true
 }
 
