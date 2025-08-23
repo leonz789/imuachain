@@ -836,11 +836,11 @@ func (f *FeederManager) ValidatePriceSourceDetIDs(msg *oracletypes.MsgCreatePric
 	if priceSourceDetIDs == nil {
 		return true
 	}
-	if priceSourceDetIDs.FeederID == 0 || priceSourceDetIDs.FeederID >= uint64(len(f.rounds)) {
+	if priceSourceDetIDs.FeederID == 0 || priceSourceDetIDs.FeederID > uint64(len(f.rounds)) {
 		return true
 	}
-	r := f.rounds[int64(priceSourceDetIDs.FeederID)]
-	if r == nil {
+	r, ok := f.rounds[int64(priceSourceDetIDs.FeederID)]
+	if !ok || r == nil {
 		return true
 	}
 	if r.a == nil || r.a.v == nil || r.a.v.records == nil {
@@ -851,9 +851,12 @@ func (f *FeederManager) ValidatePriceSourceDetIDs(msg *oracletypes.MsgCreatePric
 		if !ok {
 			return true
 		}
+		psRec, ok := records.priceSources[int64(sourceID)]
+		if !ok || psRec == nil {
+			return true
+		}
 		for _, detID := range detIDs {
-			//#nosec G115
-			if _, ok := records.priceSources[int64(sourceID)].detIDs[detID]; !ok {
+			if _, seen := psRec.detIDs[detID]; !seen {
 				return true
 			}
 		}

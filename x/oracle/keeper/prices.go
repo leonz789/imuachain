@@ -1,8 +1,6 @@
 package keeper
 
 import (
-	"errors"
-	"fmt"
 	"math/big"
 
 	sdkmath "cosmossdk.io/math"
@@ -418,6 +416,7 @@ func (k Keeper) GetAccumulatedPrice(ctx sdk.Context, tokenID uint64) (types.Pric
 	return accPrice, true
 }
 
+// CalculateTWAP calculates the TWAP for a specific tokenID within an epoch
 func (k Keeper) CalculateTWAP(ctx sdk.Context, tokenID uint64, epochNumber int64) (types.PriceEpoch, error) {
 	latestPrice, found := k.GetPriceTRLatest(ctx, tokenID)
 	if !found {
@@ -425,7 +424,6 @@ func (k Keeper) CalculateTWAP(ctx sdk.Context, tokenID uint64, epochNumber int64
 	}
 
 	var twap types.PriceEpoch
-	var err error
 	twapLatestPrice := types.PriceEpoch{
 		Epoch:   epochNumber,
 		RoundId: latestPrice.RoundID,
@@ -438,7 +436,7 @@ func (k Keeper) CalculateTWAP(ctx sdk.Context, tokenID uint64, epochNumber int64
 	bz := store.Get(key)
 	if bz == nil {
 		store.Set(keyTWAP, k.cdc.MustMarshal(&twapLatestPrice))
-		return twapLatestPrice, errors.New("CalculateTWAP failed due to no accumulatedPrice found, just set twap to the latest price")
+		return twapLatestPrice, types.ErrTWAPFallback.Wrapf("CalculateTWAP failed due to no accumulatedPrice found, just set twap to the latest price, tokenID:%d", tokenID)
 	}
 	if latestPrice.RoundID <= 1 {
 		store.Set(keyTWAP, k.cdc.MustMarshal(&twapLatestPrice))
@@ -464,26 +462,27 @@ func (k Keeper) CalculateTWAP(ctx sdk.Context, tokenID uint64, epochNumber int64
 	if latestPrice.RoundID > accPrice.LastRoundID {
 		prevPrice, ok := k.GetPriceTRRoundID(ctx, tokenID, latestPrice.RoundID-1)
 		if !ok {
-			return twapLatestPrice, fmt.Errorf("CalculateTWAP failed to accumulate price, err:%w, tokenID:%d, set twap as latestPrice", err, tokenID)
+			store.Set(keyTWAP, k.cdc.MustMarshal(&twapLatestPrice))
+			return twapLatestPrice, types.ErrTWAPFallback.Wrapf("CalculateTWAP failed to get previous price for latestPrice.RoundID-1(%d), tokenID:%d, set twap to the latest price", latestPrice.RoundID-1, tokenID)
 		}
 		// if the latest price roundID is larger than accumulated price roundID, we need to add the latest price to the accumulated price
 		prevPrice.RoundID++
 		tmp, err := accPrice.ToPriceTR().Accumulate(prevPrice)
 		if err != nil {
 			store.Set(keyTWAP, k.cdc.MustMarshal(&twapLatestPrice))
-			return twapLatestPrice, fmt.Errorf("CalculateTWAP failed to accumulate price, err:%w, tokenID:%d, set twap as latestPrice", err, tokenID)
+			return twapLatestPrice, types.ErrTWAPFallback.Wrapf("CalculateTWAP failed to accumulate price, err:%v, tokenID:%d, set twap to the latest price", err, tokenID)
 		}
 		accPrice = tmp.ToPriceAcc(accPrice.StartRoundID)
 	}
 	accPriceInt, ok := new(big.Int).SetString(accPrice.Price, 10)
 	if !ok {
 		store.Set(keyTWAP, k.cdc.MustMarshal(&twapLatestPrice))
-		return twapLatestPrice, fmt.Errorf("CalculateTWAP failed to parse accumulated price, accPrice:%s, tokenID:%d, set twap as latestPrice", accPrice.Price, tokenID)
+		return twapLatestPrice, types.ErrTWAPFallback.Wrapf("CalculateTWAP failed to parse accumulated price, accPrice:%s, tokenID:%d, set twap to the latest price", accPrice.Price, tokenID)
 	}
 	rounds = latestPrice.RoundID - accPrice.StartRoundID
 	if rounds == 0 {
 		store.Set(keyTWAP, k.cdc.MustMarshal(&twapLatestPrice))
-		return twapLatestPrice, fmt.Errorf("CalculateTWAP failed, rounds is 0, latestPrice.RoundID:%d, twap.RoundId:%d, tokenID:%d, set twap as latestPrice", latestPrice.RoundID, twap.RoundId, tokenID)
+		return twapLatestPrice, types.ErrTWAPFallback.Wrapf("CalculateTWAP failed, rounds is 0, latestPrice.RoundID:%d, twap.RoundId:%d, tokenID:%d, set twap to the latest price", latestPrice.RoundID, twap.RoundId, tokenID)
 	}
 	accPriceInt.Div(accPriceInt, new(big.Int).SetUint64(rounds))
 	twap.Price = accPriceInt.String()
