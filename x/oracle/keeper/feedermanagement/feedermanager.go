@@ -848,7 +848,7 @@ func (f *FeederManager) ValidatePriceSourceDetIDs(msg *oracletypes.MsgCreatePric
 	}
 	for sourceID, detIDs := range priceSourceDetIDs.SourceDetIDs {
 		records, ok := r.a.v.records[priceSourceDetIDs.Validator]
-		if !ok {
+		if !ok || records == nil {
 			return true
 		}
 		psRec, ok := records.priceSources[int64(sourceID)]
