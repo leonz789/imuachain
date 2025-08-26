@@ -28,20 +28,20 @@ func buildMsgCreatePrice(feederID uint64, creator sdk.AccAddress, sourceID uint6
 	}
 }
 
-func TestValidatePriceSourceDetIDs_EdgeCases(t *testing.T) {
+func TestDuplicatedPriceSourceDetIDs_EdgeCases(t *testing.T) {
 	// minimal FeederManager with only rounds populated as needed
 	fm := &FeederManager{rounds: make(map[int64]*round)}
 	creator := sdk.AccAddress(make([]byte, 20))
 
 	t.Run("returns true when priceSourceDetIDs == nil (FeederID==0)", func(t *testing.T) {
 		msg := buildMsgCreatePrice(0, creator, 1, []string{"a"})
-		require.True(t, fm.ValidatePriceSourceDetIDs(msg))
+		require.True(t, fm.DuplicatedPriceSourceDetIDs(msg))
 	})
 
 	t.Run("returns true when FeederID exceeds len(f.rounds)", func(t *testing.T) {
 		// len(rounds)==0, feederID=5 -> 5>0
 		msg := buildMsgCreatePrice(5, creator, 1, []string{"a"})
-		require.True(t, fm.ValidatePriceSourceDetIDs(msg))
+		require.True(t, fm.DuplicatedPriceSourceDetIDs(msg))
 	})
 
 	t.Run("returns true when corresponding round missing despite len >= feederID", func(t *testing.T) {
@@ -50,7 +50,7 @@ func TestValidatePriceSourceDetIDs_EdgeCases(t *testing.T) {
 		fm.rounds[20] = &round{}
 		// len(rounds)=2, feederID=1 (1<=2) but key 1 missing -> should return true
 		msg := buildMsgCreatePrice(1, creator, 1, []string{"a"})
-		require.True(t, fm.ValidatePriceSourceDetIDs(msg))
+		require.True(t, fm.DuplicatedPriceSourceDetIDs(msg))
 		// cleanup
 		delete(fm.rounds, 10)
 		delete(fm.rounds, 20)
@@ -60,15 +60,15 @@ func TestValidatePriceSourceDetIDs_EdgeCases(t *testing.T) {
 		// Round exists but aggregator nil
 		fm.rounds[1] = &round{}
 		msg := buildMsgCreatePrice(1, creator, 1, []string{"a"})
-		require.True(t, fm.ValidatePriceSourceDetIDs(msg))
+		require.True(t, fm.DuplicatedPriceSourceDetIDs(msg))
 
 		// Aggregator exists but recordsValidators nil
 		fm.rounds[1] = &round{a: &aggregator{}}
-		require.True(t, fm.ValidatePriceSourceDetIDs(msg))
+		require.True(t, fm.DuplicatedPriceSourceDetIDs(msg))
 
 		// recordsValidators exists but records map nil
 		fm.rounds[1] = &round{a: &aggregator{v: &recordsValidators{}}}
-		require.True(t, fm.ValidatePriceSourceDetIDs(msg))
+		require.True(t, fm.DuplicatedPriceSourceDetIDs(msg))
 	})
 
 	t.Run("returns true when validator entry exists but is explicitly nil", func(t *testing.T) {
@@ -77,7 +77,7 @@ func TestValidatePriceSourceDetIDs_EdgeCases(t *testing.T) {
 		r.a.v.records[validator] = nil
 		fm.rounds[1] = r
 		msg := buildMsgCreatePrice(1, creator, 1, []string{"a"})
-		require.True(t, fm.ValidatePriceSourceDetIDs(msg))
+		require.True(t, fm.DuplicatedPriceSourceDetIDs(msg))
 	})
 
 	t.Run("returns true when any detID is unseen for its sourceID", func(t *testing.T) {
@@ -90,7 +90,7 @@ func TestValidatePriceSourceDetIDs_EdgeCases(t *testing.T) {
 
 		// Msg includes {"a", "b"} -> "b" unseen => should return true
 		msg := buildMsgCreatePrice(1, creator, 1, []string{"a", "b"})
-		require.True(t, fm.ValidatePriceSourceDetIDs(msg))
+		require.True(t, fm.DuplicatedPriceSourceDetIDs(msg))
 	})
 
 	t.Run("returns false when all detIDs are already present for the same sourceID", func(t *testing.T) {
@@ -103,6 +103,6 @@ func TestValidatePriceSourceDetIDs_EdgeCases(t *testing.T) {
 
 		// Msg includes only duplicates {"a","b"} for sourceID 2 -> false
 		msg := buildMsgCreatePrice(2, creator, 2, []string{"a", "b"})
-		require.False(t, fm.ValidatePriceSourceDetIDs(msg))
+		require.False(t, fm.DuplicatedPriceSourceDetIDs(msg))
 	})
 }
