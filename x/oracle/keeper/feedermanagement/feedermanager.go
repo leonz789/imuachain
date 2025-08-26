@@ -834,14 +834,14 @@ func (f *FeederManager) SetForceSeal() {
 func (f *FeederManager) DuplicatedPriceSourceDetIDs(msg *oracletypes.MsgCreatePrice) bool {
 	priceSourceDetIDs := GetPriceSourceDetIDs(msg)
 	if priceSourceDetIDs == nil {
-		return true
+		return false
 	}
 	if priceSourceDetIDs.FeederID == 0 || priceSourceDetIDs.FeederID > uint64(len(f.rounds)) {
-		return true
+		return false
 	}
 	r := f.rounds[int64(priceSourceDetIDs.FeederID)]
 	if r == nil {
-		return true
+		return false
 	}
 	if r.a == nil || r.a.v == nil || r.a.v.records == nil {
 		return true
@@ -849,19 +849,19 @@ func (f *FeederManager) DuplicatedPriceSourceDetIDs(msg *oracletypes.MsgCreatePr
 	for sourceID, detIDs := range priceSourceDetIDs.SourceDetIDs {
 		records := r.a.v.records[priceSourceDetIDs.Validator]
 		if records == nil {
-			return true
+			return false
 		}
 		psRec := records.priceSources[int64(sourceID)]
 		if psRec == nil {
-			return true
+			return false
 		}
 		for _, detID := range detIDs {
 			if _, seen := psRec.detIDs[detID]; !seen {
-				return true
+				return false
 			}
 		}
 	}
-	return false
+	return true
 }
 
 // validateMsg validates a MsgCreatePrice against the current state and round configuration.
