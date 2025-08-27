@@ -829,8 +829,8 @@ func (f *FeederManager) SetForceSeal() {
 	f.forceSeal = true
 }
 
-// DuplicatedPriceSourceDetIDs validates the price source detIDs against duplicates
-// we only check the duplicated detIDs for the same sourceID and ignore any other errors
+// DuplicatedPriceSourceDetIDs returns true iff the msg contains duplicated detIDs against aggregated records
+// for the same sourceID; it ignores unrelated validation/state errors by design.
 func (f *FeederManager) DuplicatedPriceSourceDetIDs(msg *oracletypes.MsgCreatePrice) bool {
 	priceSourceDetIDs := GetPriceSourceDetIDs(msg)
 	if priceSourceDetIDs == nil {
@@ -844,7 +844,7 @@ func (f *FeederManager) DuplicatedPriceSourceDetIDs(msg *oracletypes.MsgCreatePr
 		return false
 	}
 	if r.a == nil || r.a.v == nil || r.a.v.records == nil {
-		return true
+		return false
 	}
 	for sourceID, detIDs := range priceSourceDetIDs.SourceDetIDs {
 		records := r.a.v.records[priceSourceDetIDs.Validator]
