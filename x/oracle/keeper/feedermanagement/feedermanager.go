@@ -829,40 +829,39 @@ func (f *FeederManager) SetForceSeal() {
 	f.forceSeal = true
 }
 
-// ValidatePriceSourceDetIDs validates the price source detIDs
-// we only check the duplicated detIDs for the same sourceID and ignore any other errors
-func (f *FeederManager) ValidatePriceSourceDetIDs(msg *oracletypes.MsgCreatePrice) bool {
+// DuplicatedPriceSourceDetIDs returns true iff the msg contains duplicated detIDs against aggregated records
+// for the same sourceID; it ignores unrelated validation/state errors by design.
+func (f *FeederManager) DuplicatedPriceSourceDetIDs(msg *oracletypes.MsgCreatePrice) bool {
 	priceSourceDetIDs := GetPriceSourceDetIDs(msg)
 	if priceSourceDetIDs == nil {
-		return true
+		return false
 	}
 	if priceSourceDetIDs.FeederID == 0 || priceSourceDetIDs.FeederID > uint64(len(f.rounds)) {
-		return true
+		return false
 	}
-	r, ok := f.rounds[int64(priceSourceDetIDs.FeederID)]
-	if !ok || r == nil {
-		return true
+	r := f.rounds[int64(priceSourceDetIDs.FeederID)]
+	if r == nil {
+		return false
 	}
 	if r.a == nil || r.a.v == nil || r.a.v.records == nil {
-		return true
+		return false
 	}
 	for sourceID, detIDs := range priceSourceDetIDs.SourceDetIDs {
-		records, ok := r.a.v.records[priceSourceDetIDs.Validator]
-		if !ok || records == nil {
-			return true
+		records := r.a.v.records[priceSourceDetIDs.Validator]
+		if records == nil {
+			return false
 		}
-		psRec, ok := records.priceSources[int64(sourceID)]
-		if !ok || psRec == nil {
-			return true
+		psRec := records.priceSources[int64(sourceID)]
+		if psRec == nil {
+			return false
 		}
 		for _, detID := range detIDs {
 			if _, seen := psRec.detIDs[detID]; !seen {
-				return true
+				return false
 			}
 		}
 	}
-
-	return false
+	return true
 }
 
 // validateMsg validates a MsgCreatePrice against the current state and round configuration.
