@@ -7,7 +7,7 @@ before:
 builds:
   - id: "imuad-darwin"
     main: ./cmd/imuad
-    binary: bin/imuad
+    binary: imuad
     env:
       - CGO_ENABLED=1
       - CC=o64-clang
@@ -22,7 +22,7 @@ builds:
       - -s -w -X github.com/cosmos/cosmos-sdk/version.Name=imua -X github.com/cosmos/cosmos-sdk/version.AppName=imuad -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
   - id: "imuad-darwin-arm64"
     main: ./cmd/imuad
-    binary: bin/imuad
+    binary: imuad
     env:
       - CGO_ENABLED=1
       - CC=oa64-clang
@@ -37,7 +37,7 @@ builds:
       - -s -w -X github.com/cosmos/cosmos-sdk/version.Name=imua -X github.com/cosmos/cosmos-sdk/version.AppName=imuad -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
   - id: "imuad-linux"
     main: ./cmd/imuad
-    binary: bin/imuad
+    binary: imuad
     env:
       - CGO_ENABLED=1
       - CC=gcc
@@ -52,7 +52,7 @@ builds:
       - -s -w -X github.com/cosmos/cosmos-sdk/version.Name=imua -X github.com/cosmos/cosmos-sdk/version.AppName=imuad -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
   - id: "imuad-linux-arm64"
     main: ./cmd/imuad
-    binary: bin/imuad
+    binary: imuad
     env:
       - CGO_ENABLED=1
       - CC=aarch64-linux-gnu-gcc
@@ -67,7 +67,7 @@ builds:
       - -s -w -X github.com/cosmos/cosmos-sdk/version.Name=imua -X github.com/cosmos/cosmos-sdk/version.AppName=imuad -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
   - id: "imuad-windows"
     main: ./cmd/imuad
-    binary: bin/imuad
+    binary: imuad
     env:
       - CGO_ENABLED=1
       - CC=x86_64-w64-mingw32-gcc
