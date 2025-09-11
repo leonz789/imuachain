@@ -2,12 +2,12 @@ FROM debian:bookworm-slim
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates tzdata && \
+    ca-certificates tzdata curl && \
     rm -rf /var/lib/apt/lists/*
 
 COPY ./imuad /usr/local/bin/imuad
 
-RUN useradd -r -u 10001 -m -d /home/imua -s /user/sbin/nologin imua && \
+RUN useradd -r -u 10001 -m -d /home/imua -s /user/sbin/nologin -U imua && \
     chown -R imua:imua /home/imua /usr/local/bin/imuad
 
 USER imua
