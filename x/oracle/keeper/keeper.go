@@ -2,6 +2,8 @@ package keeper
 
 import (
 	"fmt"
+	"sync/atomic"
+	"time"
 
 	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -29,6 +31,7 @@ type (
 		postHandlers               map[int64]common.PostAggregationHandler
 		cachedNSTStakersEventValue *string
 		c                          *common.Caches
+		blkOracleNS                *atomic.Int64
 	}
 )
 
@@ -68,6 +71,7 @@ func NewKeeper(
 		postHandlers:               make(map[int64]common.PostAggregationHandler),
 		cachedNSTStakersEventValue: new(string),
 		c:                          common.NewCaches(),
+		blkOracleNS:                new(atomic.Int64),
 	}
 	ret.FeederManager.SetKeeper(&ret)
 	return ret
@@ -85,4 +89,17 @@ func (k Keeper) FlushCachedNSTStakersEvent(ctx sdk.Context) {
 		))
 		*k.cachedNSTStakersEventValue = ""
 	}
+}
+
+func (k Keeper) addTotald(d time.Duration) {
+	k.blkOracleNS.Add(d.Nanoseconds())
+}
+
+func (k Keeper) GetAndResetTotald() float32 {
+	return float32(k.blkOracleNS.Swap(0)) / 1000_000
+}
+
+// for debug purpose only
+func (k Keeper) GetTotald() float32 {
+	return float32(k.blkOracleNS.Load()) / 1000_000
 }
