@@ -55,9 +55,15 @@ command -v bc >/dev/null 2>&1 || {
   exit 1
 }
 
-# check that ALCHEMY_API_KEY is set
+# ensure ALCHEMY_API_KEY is set
 if [ -z "$ALCHEMY_API_KEY" ]; then
   echo "ALCHEMY_API_KEY is not set"
+  exit 1
+fi
+
+# ensure BOOTSTRAP is set (used by oracle_env_beaconchain.yaml)
+if [ -z "$BOOTSTRAP" ]; then
+  echo "BOOTSTRAP is not set"
   exit 1
 fi
 

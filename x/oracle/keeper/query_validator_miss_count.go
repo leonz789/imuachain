@@ -13,7 +13,9 @@ func (k Keeper) ValidatorMissCount(goCtx context.Context, req *types.QueryValida
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
-	sdk.ConsAddressFromBech32(req.Validator)
+	if _, err := sdk.ConsAddressFromBech32(req.Validator); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid validator consensus address")
+	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	info, found := k.GetValidatorReportInfo(ctx, req.Validator)
 	if !found {

@@ -19,6 +19,7 @@ option go_package = "github.com/imua-xyz/imuachain/x/oracle/types";
 
 // Query defines the gRPC querier service.
 service Query {
+  // ValidatorMissCount shows the miss count of a validator
   rpc ValidatorMissCount(QueryValidatorMissCountRequest) returns (QueryValidatorMissCountResponse) {
     option (google.api.http).get = "/imuachain/oracle/v1/validator_miss_count";
   }
