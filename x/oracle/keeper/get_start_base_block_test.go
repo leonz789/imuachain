@@ -201,7 +201,7 @@ func TestGetStartBaseBlock(t *testing.T) {
 				},
 			},
 			expected:    3, // Should return offset 3, so startBaseBlock = 21 + 3 - 1 = 23, first quoting block = 24
-			description: "firstQuotingHeight equals feeder startBaseBlock. Feeder's first quoting window is {21,22,23}. New asset needs offset 4 to avoid conflict.",
+			description: "firstQuotingHeight equals feeder startBaseBlock. Feeder's first quoting window is {21,22,23}. New asset needs offset 3 to avoid conflict.",
 		},
 		{
 			name:               "complex overlapping scenario",

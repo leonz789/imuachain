@@ -167,17 +167,23 @@ func GetStartBaseBlock(firstQuotingHeight, window, interval uint64, tfs []*types
 		// Calculate the first quoting block of this feeder's latest round that's <= firstQuotingHeight
 		if firstQuotingHeight < tfStartL {
 			rounds := (tfStartL - firstQuotingHeight) / tf.Interval
-			tfStartL = tfStartL - (rounds+1)*tf.Interval
+			// tfStartL = tfStartL - (rounds+1)*tf.Interval
+			if (rounds+1)*tf.Interval > tfStartL {
+				tfStartL = 0
+			} else {
+				tfStartL -= (rounds + 1) * tf.Interval
+			}
 		} else {
 			rounds := (firstQuotingHeight - tfStartL) / tf.Interval
-			tfStartL = tfStartL + tf.Interval*rounds
+			tfStartL += tf.Interval * rounds
 		}
 
 		// Process all quoting windows of this feeder that overlap with our interval
-		for tfStartL < firstQuotingHeight+interval {
+		scanUntil := firstQuotingHeight + interval
+		for tfStartL < scanUntil {
 			tfStartR := tfStartL + window
 			tmp := tfStartL + 1 // first quoting block
-			for tmp < firstQuotingHeight+interval && tmp <= tfStartR {
+			for tmp < scanUntil && tmp <= tfStartR {
 				if tmp >= firstQuotingHeight {
 					offset := tmp - firstQuotingHeight
 					if offset < interval {
@@ -187,6 +193,9 @@ func GetStartBaseBlock(firstQuotingHeight, window, interval uint64, tfs []*types
 				tmp++
 			}
 			tfStartL += tf.Interval
+			if tf.EndBlock > 0 && tfStartL >= tf.EndBlock {
+				break
+			}
 		}
 	}
 	minIndex := 0
