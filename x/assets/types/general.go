@@ -213,9 +213,13 @@ func UpdateAssetDecValue(valueToUpdate *math.LegacyDec, changeValue *math.Legacy
 // to represent the address of native restaking asset. It's okay because we can distinguish
 // which client chain's native asset it is through the clientChainID in the assetID.
 func GenerateNSTAddr(clientChainAddrLength uint32) []byte {
+	if clientChainAddrLength == 0 {
+		return []byte{}
+	}
 	address := make([]byte, clientChainAddrLength)
-	for i := range address {
-		address[i] = FillCharForRestakingAssetAddr
+	address[0] = FillCharForRestakingAssetAddr
+	for i := 1; i < int(clientChainAddrLength); i *= 2 {
+		copy(address[i:], address[:i])
 	}
 	return address
 }
