@@ -189,23 +189,16 @@ func UpdateAssetDecValue(valueToUpdate *math.LegacyDec, changeValue *math.Legacy
 		)
 	}
 
-	if !changeValue.IsNil() {
-		if changeValue.IsNegative() {
-			if valueToUpdate.LT(changeValue.Neg()) {
-				return errorsmod.Wrap(
-					ErrSubAmountIsMoreThanOrigin,
-					fmt.Sprintf(
-						"valueToUpdate:%s,changeValue:%s",
-						*valueToUpdate,
-						*changeValue,
-					),
-				)
-			}
-		}
-		if !changeValue.IsZero() {
-			*valueToUpdate = valueToUpdate.Add(*changeValue)
-		}
+	if changeValue.IsNil() || changeValue.IsZero() {
+		return nil
 	}
+	if changeValue.IsNegative() && valueToUpdate.LT(changeValue.Neg()) {
+		return errorsmod.Wrap(
+			ErrSubAmountIsMoreThanOrigin,
+			fmt.Sprintf("valueToUpdate:%s,changeValue:%s", *valueToUpdate, *changeValue),
+		)
+	}
+	*valueToUpdate = valueToUpdate.Add(*changeValue)
 	return nil
 }
 
