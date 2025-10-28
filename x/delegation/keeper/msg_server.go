@@ -34,9 +34,16 @@ func (k *Keeper) DelegateAssetToOperator(
 	delegationParamsList := newDelegationOrUndelegationParams(
 		msg.BaseInfo, assetstypes.ImuachainAssetAddr, assetstypes.ImuachainLzID, common.Hash{}, false,
 	)
-	cachedCtx, writeFunc := ctx.CacheContext()
+	// No need for CacheContext here because the transaction execution itself is already wrapped
+	// in a cache context at the BaseApp level. If any message fails, the entire transaction will roll back.
 	for _, delegationParams := range delegationParamsList {
+<<<<<<< HEAD
 		if _, _, err := k.DelegateTo(cachedCtx, delegationParams); err != nil {
+||||||| parent of 680a4af9 (check nil value to avoid panic)
+		if err := k.DelegateTo(cachedCtx, delegationParams); err != nil {
+=======
+		if err := k.DelegateTo(ctx, delegationParams); err != nil {
+>>>>>>> 680a4af9 (check nil value to avoid panic)
 			logger.Error(
 				"failed to delegate asset",
 				"error", err,
@@ -46,7 +53,6 @@ func (k *Keeper) DelegateAssetToOperator(
 			return nil, err
 		}
 	}
-	writeFunc()
 
 	return &types.DelegationResponse{}, nil
 }
@@ -76,13 +82,13 @@ func (k *Keeper) UndelegateAssetFromOperator(
 	inputParamsList := newDelegationOrUndelegationParams(
 		msg.BaseInfo, assetstypes.ImuachainAssetAddr, assetstypes.ImuachainLzID, uniqueHash, msg.InstantUnbonding,
 	)
-	cachedCtx, writeFunc := ctx.CacheContext()
+	// No need for CacheContext here because the transaction execution itself is already wrapped
+	// in a cache context at the BaseApp level. If any message fails, the entire transaction will roll back.
 	for _, inputParams := range inputParamsList {
-		if err := k.UndelegateFrom(cachedCtx, inputParams); err != nil {
+		if err := k.UndelegateFrom(ctx, inputParams); err != nil {
 			return nil, err
 		}
 	}
-	writeFunc()
 	return &types.UndelegationResponse{}, nil
 }
 

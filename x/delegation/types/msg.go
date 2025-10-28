@@ -89,16 +89,6 @@ func NewMsgUndelegation(instantUnbonding bool, assetID, fromAddress string, amou
 // TODO: delegation and undelegation have the same params, try to use one single message with
 // different flag to indicate action:delegation/undelegation
 func validateDelegationInfo(assetID string, baseInfo *DelegationIncOrDecInfo) error {
-	for _, kv := range baseInfo.PerOperatorAmounts {
-		if _, err := sdk.AccAddressFromBech32(kv.Key); err != nil {
-			return errorsmod.Wrap(err, "invalid operator address delegateTO")
-		}
-		if !kv.Value.Amount.IsPositive() {
-			return ErrAmountIsNotPositive.Wrapf(
-				"amount should be positive, got %s", kv.Value.Amount.String(),
-			)
-		}
-	}
 	if assetID != assetstype.ImuachainAssetID {
 		return ErrInvalidAssetID.Wrapf(
 			"only nativeToken is support, expected:%s,got:%s", assetstype.ImuachainAssetID, assetID,
@@ -106,6 +96,19 @@ func validateDelegationInfo(assetID string, baseInfo *DelegationIncOrDecInfo) er
 	}
 	if _, err := sdk.AccAddressFromBech32(baseInfo.FromAddress); err != nil {
 		return errorsmod.Wrap(err, "invalid from address")
+	}
+	if len(baseInfo.PerOperatorAmounts) == 0 {
+		return errorsmod.Wrap(ErrInvalidInputParameter, "no operator amounts")
+	}
+	for _, kv := range baseInfo.PerOperatorAmounts {
+		if _, err := sdk.AccAddressFromBech32(kv.Key); err != nil {
+			return errorsmod.Wrap(err, "invalid operator address delegateTo")
+		}
+		if !kv.Value.Amount.IsPositive() {
+			return ErrAmountIsNotPositive.Wrapf(
+				"amount should be positive, got %s", kv.Value.Amount.String(),
+			)
+		}
 	}
 	return nil
 }
