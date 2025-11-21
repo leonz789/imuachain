@@ -31,14 +31,7 @@ func (k Keeper) SetParams(ctx sdk.Context, params *assetstypes.Params) error {
 
 // validateGatewayBusinessRules applies business logic validation to gateway addresses
 func (k Keeper) validateGatewayBusinessRules(gateway string) error {
-	// Check if address is in forbidden list
-	for _, forbidden := range assetstypes.ForbiddenGatewayAddresses {
-		if strings.EqualFold(gateway, forbidden) {
-			return assetstypes.ErrInvalidEvmAddressFormat.Wrapf(
-				"address is in forbidden list: %s", gateway)
-		}
-	}
-	return nil
+	return assetstypes.ValidateGatewayBusinessRules(gateway)
 }
 
 func (k Keeper) GetParams(ctx sdk.Context) (*assetstypes.Params, error) {

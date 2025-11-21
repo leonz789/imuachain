@@ -95,12 +95,13 @@ func (p Params) ValidateBasic() error {
 	return nil
 }
 
-// validateGatewayBusinessRules applies business logic validation to gateway addresses
-func validateGatewayBusinessRules(gateway string) error {
+// ValidateGatewayBusinessRules applies business logic validation to gateway addresses
+func ValidateGatewayBusinessRules(gateway string) error {
 	// Check if address is in forbidden list
 	for _, forbidden := range ForbiddenGatewayAddresses {
 		if strings.EqualFold(gateway, forbidden) {
-			return fmt.Errorf("address is in forbidden list: %s", gateway)
+			return ErrInvalidEvmAddressFormat.Wrapf(
+				"address is in forbidden list: %s", gateway)
 		}
 	}
 	return nil

@@ -182,7 +182,7 @@ func TestValidateGatewayBusinessRules(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateGatewayBusinessRules(tc.address)
+			err := ValidateGatewayBusinessRules(tc.address)
 			if tc.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.errorMsg)
