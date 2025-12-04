@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
 
+# check that ALCHEMY_API_KEY is set
+if [ -z "$ALCHEMY_API_KEY" ]; then
+	echo "ALCHEMY_API_KEY is not set"
+	exit 1
+fi
+if [ -z "$BOOTSTRAP" ]; then
+	echo "BOOTSTRAP is not set"
+	exit 1
+fi
+
 KEYS[0]="dev0"
 KEYS[1]="dev1"
 KEYS[2]="dev2"
@@ -175,9 +185,9 @@ if [[ $overwrite == "y" || $overwrite == "Y" ]]; then
 	jq '.app_state["operator"]["operators"][0]["operator_info"]["earnings_addr"]="'"$LOCAL_ADDRESS_IM"'"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 	jq '.app_state["operator"]["operators"][0]["operator_info"]["approve_addr"]="'"$LOCAL_ADDRESS_IM"'"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 	jq '.app_state["operator"]["operators"][0]["operator_info"]["operator_meta_info"]="operator1"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-	jq '.app_state["operator"]["operators"][0]["operator_info"]["commission"]["commission_rates"]["rate"]="0.07"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-	jq '.app_state["operator"]["operators"][0]["operator_info"]["commission"]["commission_rates"]["max_rate"]="0.1"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-	jq '.app_state["operator"]["operators"][0]["operator_info"]["commission"]["commission_rates"]["max_change_rate"]="0.01"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+	jq '.app_state["operator"]["operators"][0]["operator_info"]["commission"]["commission_rates"]["rate"]="0.05"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+	jq '.app_state["operator"]["operators"][0]["operator_info"]["commission"]["commission_rates"]["max_rate"]="1.0"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+	jq '.app_state["operator"]["operators"][0]["operator_info"]["commission"]["commission_rates"]["max_change_rate"]="0.1"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 	jq '.app_state["operator"]["operator_records"][0]["operator_address"]="'"$LOCAL_ADDRESS_IM"'"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 	jq '.app_state["operator"]["operator_records"][0]["chains"][0]["chain_id"]="'"$CHAINID_WITHOUT_REVISION"'"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 	jq '.app_state["operator"]["operator_records"][0]["chains"][0]["consensus_key"]="'"$CONSENSUS_KEY"'"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
