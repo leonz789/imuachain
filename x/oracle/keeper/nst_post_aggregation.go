@@ -407,35 +407,11 @@ func (k Keeper) updateStaker(ctx sdk.Context, chainID, roundID, balance, feedVer
 				k.refreshCachedStakerList(ctx, chainID)
 			}
 		}
-	}
 
-	// set staker
-	//	if action == types.Action_ACTION_DEPOSIT {
-	//		updatedVersion := k.IncreaseVersionByDeposit(ctx, chainID, balance)
-	//		staker.ValidatorList = append(staker.ValidatorList, &types.ValidatorDeposit{
-	//			ValidatorPubkey: validator,
-	//			Version:         updatedVersion,
-	//			DepositAmount:   balance,
-	//		})
-	//		k.SetStaker(ctx, chainID, stakerAddr, staker)
-	//		if !ctx.IsCheckTx() && stakerInfo.StakerAddr == "" {
-	//			if success := k.c.AddNSTStaker(chainID, types.StakerListEntry{StakerAddr: stakerAddr, WithdrawVersion: staker.WithdrawVersion}, updatedIndex); !success {
-	//				k.refreshCachedStakerList(ctx, chainID)
-	//			}
-	//		}
-	//	} else if action == types.Action_ACTION_WITHDRAW {
-	//		// we don't need to check staker has enough balance, because assets module has done that check
-	//		// and the previous check has guaranteed stakerInfo.BalanceList is not empty
-	//		withdrawVersion := k.IncreaseVersionByWithdraw(ctx, chainID)
-	//		staker.WithdrawVersion = withdrawVersion
-	//		k.SetStaker(ctx, chainID, stakerAddr, staker)
-	//		// TODO: use update instead of refresh all
-	//		if !ctx.IsCheckTx() {
-	//			if success := k.c.UpdateWithdrawVersion(chainID, stakerAddr, staker.StakerIndex, withdrawVersion); !success {
-	//				k.refreshCachedStakerList(ctx, chainID)
-	//			}
-	//		}
-	//	}
+	default:
+		// ACTION_SLASH_REFUND and ACTION_ROUND_UNSPECIFIED don't require staker updates in this switch
+		// They are handled elsewhere in the function (balance calculations, etc.)
+	}
 
 	// set balanceList
 	newBalance.Index++
