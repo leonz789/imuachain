@@ -100,7 +100,7 @@ func ValidateGatewayBusinessRules(gateway string) error {
 	// Check if address is in forbidden list
 	for _, forbidden := range forbiddenGatewayAddresses {
 		if strings.EqualFold(gateway, forbidden) {
-			return ErrInvalidEvmAddressFormat.Wrapf(
+			return ErrForbiddenGatewayAddress.Wrapf(
 				"address is in forbidden list: %s", gateway)
 		}
 	}
