@@ -235,11 +235,8 @@ func GetClientChainIDFromNSTAssetID(assetID string) (uint64, bool) {
 	return 0, false
 }
 
-func GetNSTChainFromNSTAssetID(assetID string) (chain NSTType, ok bool) {
-	chainIDStr, ok := strings.CutPrefix(strings.ToLower(assetID), NSTIDPrefix)
-	if !ok {
-		return "", false
-	}
+func GetNSTChainFromChainID(chainID uint64) (chain NSTType, ok bool) {
+	chainIDStr := hexutil.EncodeUint64(chainID)
 	chain, ok = NSTChainsInverted[chainIDStr]
 	return
 }
@@ -272,7 +269,6 @@ func GetBSCAddressStrFromValidatorPubkeyStr(validatorPubkey string) (string, err
 		return "", errors.New("invalid BSC validator pubkey")
 	}
 	return addr, nil
-
 }
 
 // ValidSOLAddressWithPrefix validates a Solana validator pubkey encoded as hex bytes with a 0x prefix.
