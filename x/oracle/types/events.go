@@ -23,6 +23,11 @@ const (
 	AttributeKeyNSTPieceChange   = "nst_piece_Change"
 	AttributeKeyNSTVersionUpdate = "nst_version_update"
 	AttributeKeyNSTFeedVersion   = "nst_feed_version"
+	// xchain post-aggregation attributes
+	AttributeKeyXChainSrcChainID = "xchain_src_chain_id"
+	AttributeKeyXChainBatchSeq   = "xchain_batch_seq"
+	AttributeKeyXChainMsgCount   = "xchain_msg_count"
+	AttributeKeyXChainRootHash   = "xchain_root_hash"
 	AttributeKeyValidatorKey     = "validator_key"
 	AttributeKeyMissedRounds     = "missed_rounds"
 	AttributeKeyHeight           = "height"
