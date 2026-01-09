@@ -11,11 +11,6 @@ import (
 )
 
 func (k Keeper) SetParams(ctx sdk.Context, params *assetstypes.Params) error {
-	// Ensure at least one gateway exists
-	if len(params.Gateways) == 0 {
-		return assetstypes.ErrNoGateways
-	}
-
 	// Apply business logic validation (blacklist check)
 	// Static checks already done in AnteHandler via ValidateBasic
 	for _, gateway := range params.Gateways {

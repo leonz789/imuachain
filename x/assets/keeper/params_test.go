@@ -30,6 +30,11 @@ func (suite *StakingAssetsTestSuite) TestParamsBusinessRules() {
 			expectError: false,
 		},
 		{
+			name:        "empty gateways list is allowed",
+			gateways:    []string{},
+			expectError: false,
+		},
+		{
 			name:        "zero address should be rejected by business rules",
 			gateways:    []string{"0x0000000000000000000000000000000000000000"},
 			expectError: true,

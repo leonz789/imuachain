@@ -98,13 +98,8 @@ var (
 		"the joined key can't be parsed",
 	)
 
-	ErrNoGateways = errorsmod.Register(
-		ModuleName, 21,
-		"at least one gateway must be provided",
-	)
-
 	ErrForbiddenGatewayAddress = errorsmod.Register(
-		ModuleName, 22,
+		ModuleName, 21,
 		"the gateway address is in the forbidden list",
 	)
 )
