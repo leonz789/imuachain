@@ -8,6 +8,7 @@ import (
 )
 
 func TestE2ESuite(t *testing.T) {
+	ensureXChainGenesis()
 	cfg := network.DefaultConfig()
 	cfg.NumValidators = 4
 	cfg.CleanupDir = true

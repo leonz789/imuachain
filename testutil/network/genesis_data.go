@@ -94,6 +94,23 @@ func init() {
 	DefaultGenStateOracle.Params.Slashing.ReportedRoundsWindow = 4
 	// set jailduration of oracle report downtime to 15 seconds for test
 	DefaultGenStateOracle.Params.Slashing.OracleMissJailDuration = 15 * time.Second
+	// set initial prices to avoid zero voting power at epoch end
+	DefaultGenStateOracle.PricesList = []oracletypes.Prices{
+		{
+			TokenID:     1,
+			NextRoundID: 2,
+			PriceList: []*oracletypes.PriceTimeRound{
+				{Price: "1", Decimal: 0, RoundID: 1},
+			},
+		},
+		{
+			TokenID:     2,
+			NextRoundID: 2,
+			PriceList: []*oracletypes.PriceTimeRound{
+				{Price: "1", Decimal: 0, RoundID: 1},
+			},
+		},
+	}
 	switch os.Getenv("TEST_OPTION") {
 	case "nst-malicious":
 		fallthrough

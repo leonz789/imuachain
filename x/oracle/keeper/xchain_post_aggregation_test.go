@@ -111,3 +111,47 @@ func TestUpdateXChainMsgs_BudgetedDelivery(t *testing.T) {
 	require.True(t, found)
 	require.EqualValues(t, 1, execSeq)
 }
+
+func TestUpdateXChainMsgs_InvalidPayloadB64(t *testing.T) {
+	k, ctx := keepertest.OracleKeeper(t)
+
+	rootHash := make([]byte, 32)
+	batch := keeper.RawDataXChainBatch{
+		SrcChainID: 2,
+		BatchSeq:   1,
+		Messages: []keeper.RawDataXChainMsg{
+			{ID: "badpayload", Nonce: 1, Type: "evm", PayloadB64: "%%%"},
+		},
+	}
+	raw, err := json.Marshal(batch)
+	require.NoError(t, err)
+
+	err = keeper.UpdateXChainMsgs(ctx, rootHash, raw, 1, 1, k)
+	require.Error(t, err)
+
+	_, found := k.GetXChainLastSeq(ctx, 2)
+	require.False(t, found)
+	require.False(t, k.HasXChainQueue(ctx, 2))
+}
+
+func TestUpdateXChainMsgs_EmptyMsgID(t *testing.T) {
+	k, ctx := keepertest.OracleKeeper(t)
+
+	rootHash := make([]byte, 32)
+	batch := keeper.RawDataXChainBatch{
+		SrcChainID: 3,
+		BatchSeq:   1,
+		Messages: []keeper.RawDataXChainMsg{
+			{ID: "", Nonce: 1, Type: "evm"},
+		},
+	}
+	raw, err := json.Marshal(batch)
+	require.NoError(t, err)
+
+	err = keeper.UpdateXChainMsgs(ctx, rootHash, raw, 1, 1, k)
+	require.Error(t, err)
+
+	_, found := k.GetXChainLastSeq(ctx, 3)
+	require.False(t, found)
+	require.False(t, k.HasXChainQueue(ctx, 3))
+}

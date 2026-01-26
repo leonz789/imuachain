@@ -1,0 +1,328 @@
+package oracle
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"math/big"
+	"strconv"
+	"strings"
+
+	sdkmath "cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/ethereum/go-ethereum/common"
+	keeper "github.com/imua-xyz/imuachain/x/oracle/keeper"
+	assetstypes "github.com/imua-xyz/imuachain/x/assets/types"
+	oracletypes "github.com/imua-xyz/imuachain/x/oracle/types"
+
+	"github.com/imua-xyz/imuachain/testutil/network"
+)
+
+func (s *E2ETestSuite) TestCrossChainOracle2Phases() {
+	// Ensure local keyring/creator are initialized regardless of test order.
+	kr0 = s.network.Validators[0].ClientCtx.Keyring
+	creator0 = sdk.AccAddress(s.network.Validators[0].PubKey.Address())
+	kr1 = s.network.Validators[1].ClientCtx.Keyring
+	creator1 = sdk.AccAddress(s.network.Validators[1].PubKey.Address())
+	kr2 = s.network.Validators[2].ClientCtx.Keyring
+	creator2 = sdk.AccAddress(s.network.Validators[2].PubKey.Address())
+
+	ctx := context.Background()
+	paramsRes, err := s.network.QueryOracle().Params(ctx, &oracletypes.QueryParamsRequest{})
+	s.Require().NoError(err)
+
+	feederID, startBaseBlock, interval := s.mustGetXChainFeeder(paramsRes.Params)
+	oracleCaller := common.BytesToAddress(authtypes.NewModuleAddress(oracletypes.ModuleName))
+	gatewayAddr := s.deployOracleGateway(oracleCaller)
+	s.Require().Equal(strings.ToLower(network.ExpectedOracleGatewayAddress().Hex()), strings.ToLower(gatewayAddr.Hex()))
+
+	currentHeight, err := s.network.LatestStateHeight()
+	s.Require().NoError(err)
+	minHeight := int64(startBaseBlock) + int64(paramsRes.Params.MaxNonce) + 2
+	if currentHeight < minHeight {
+		s.moveToAndCheck(minHeight)
+	}
+
+	baseBlock := s.nextBaseBlock(startBaseBlock, interval)
+	s.moveToAndCheck(baseBlock)
+
+	srcChainID := uint64(network.TestEVMChainID)
+	batch := keeper.RawDataXChainBatch{
+		SrcChainID: srcChainID,
+		BatchSeq:   1,
+		Messages: []keeper.RawDataXChainMsg{
+			{
+				ID:         "xmsg:0",
+				Nonce:      1,
+				Type:       "evm",
+				PayloadB64: base64.StdEncoding.EncodeToString([]byte("hello")),
+			},
+			{
+				ID:         "xmsg:1",
+				Nonce:      2,
+				Type:       "evm",
+				PayloadB64: base64.StdEncoding.EncodeToString([]byte("world")),
+			},
+		},
+	}
+	rawData, err := json.Marshal(batch)
+	s.Require().NoError(err)
+
+	mt, err := oracletypes.DeriveMT(uint32(paramsRes.Params.PieceSizeByte), rawData)
+	s.Require().NoError(err)
+	rootHash := mt.RootHash()
+	leafCount := mt.LeafCount()
+
+	_, ps := priceNST1.generateRealTimeStructs("1", 1)
+	leafCountStr := strconv.Itoa(int(leafCount))
+	ps.Prices[0].Price = string(append(rootHash, leafCountStr...))
+
+	msg0 := oracletypes.NewMsgCreatePrice2Phase(creator0.String(), feederID, []*oracletypes.PriceSource{&ps}, uint64(baseBlock), 1)
+	msg1 := oracletypes.NewMsgCreatePrice2Phase(creator1.String(), feederID, []*oracletypes.PriceSource{&ps}, uint64(baseBlock), 1)
+	msg2 := oracletypes.NewMsgCreatePrice2Phase(creator2.String(), feederID, []*oracletypes.PriceSource{&ps}, uint64(baseBlock), 1)
+	s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg0}, "valconskey0", kr0))
+	s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg1}, "valconskey1", kr1))
+	s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg2}, "valconskey2", kr2))
+
+	phaseTwoStart := baseBlock + int64(paramsRes.Params.MaxNonce)
+	s.moveToAndCheck(phaseTwoStart)
+	// Allow the 2nd-phase state (nextPieceIndex) to be initialized.
+	s.moveNAndCheck(1)
+
+	pieces, ok := mt.CollectedPieces()
+	s.Require().True(ok)
+	for i, piece := range pieces {
+		proof := mt.MinimalProofByIndex(uint32(i))
+		idxStr, hashStr := proof.FlattenString()
+		_, ps2 := priceNST1.generateRealTimeStructs("1", 1)
+		ps2.Prices[0].Price = string(piece)
+		ps2.Prices[0].DetID = strconv.Itoa(i)
+		if len(idxStr) > 0 {
+			ps2.Prices = append(ps2.Prices, &oracletypes.PriceTimeDetID{
+				Price:     hashStr,
+				DetID:     idxStr,
+				Timestamp: now,
+			})
+		}
+
+		msg0 = oracletypes.NewMsgCreatePrice2Phase2(creator0.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
+		msg1 = oracletypes.NewMsgCreatePrice2Phase2(creator1.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
+		msg2 = oracletypes.NewMsgCreatePrice2Phase2(creator2.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
+		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg0}, "valconskey0", kr0))
+		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg1}, "valconskey1", kr1))
+		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg2}, "valconskey2", kr2))
+		s.moveNAndCheck(1)
+	}
+
+	// Allow EndBlock queue processing to complete.
+	s.moveNAndCheck(2)
+
+	execSeq := s.queryXChainLastExecutedSeq(srcChainID)
+	s.Require().EqualValues(1, execSeq)
+
+	processed := s.queryOracleStore(oracletypes.XChainMsgProcessedKey(srcChainID, "xmsg:0"))
+	s.Require().Greater(len(processed), 0)
+}
+
+func (s *E2ETestSuite) TestCrossChainOracle2PhasesDepositLST() {
+	// Ensure local keyring/creator are initialized regardless of test order.
+	kr0 = s.network.Validators[0].ClientCtx.Keyring
+	creator0 = sdk.AccAddress(s.network.Validators[0].PubKey.Address())
+	kr1 = s.network.Validators[1].ClientCtx.Keyring
+	creator1 = sdk.AccAddress(s.network.Validators[1].PubKey.Address())
+	kr2 = s.network.Validators[2].ClientCtx.Keyring
+	creator2 = sdk.AccAddress(s.network.Validators[2].PubKey.Address())
+
+	ctx := context.Background()
+	paramsRes, err := s.network.QueryOracle().Params(ctx, &oracletypes.QueryParamsRequest{})
+	s.Require().NoError(err)
+
+	feederID, startBaseBlock, interval := s.mustGetXChainFeeder(paramsRes.Params)
+	oracleCaller := common.BytesToAddress(authtypes.NewModuleAddress(oracletypes.ModuleName))
+	gatewayAddr := s.deployOracleGateway(oracleCaller)
+	s.Require().Equal(strings.ToLower(network.ExpectedOracleGatewayAddress().Hex()), strings.ToLower(gatewayAddr.Hex()))
+
+	currentHeight, err := s.network.LatestStateHeight()
+	s.Require().NoError(err)
+	minHeight := int64(startBaseBlock) + int64(paramsRes.Params.MaxNonce) + 2
+	if currentHeight < minHeight {
+		s.moveToAndCheck(minHeight)
+	}
+
+	baseBlock := s.nextBaseBlock(startBaseBlock, interval)
+	s.moveToAndCheck(baseBlock)
+
+	srcChainID := uint64(network.TestEVMChainID)
+	stakerAddr := common.BytesToAddress(s.network.Validators[0].Address.Bytes())
+	tokenAddr := common.HexToAddress(network.ETHAssetAddress)
+	opAmount := sdkmath.NewInt(1000)
+
+	stakerID, assetID := assetstypes.GetStakerIDAndAssetID(
+		srcChainID,
+		stakerAddr.Bytes(),
+		tokenAddr.Bytes(),
+	)
+	before := s.queryStakerTotalDeposited(ctx, stakerID, assetID)
+
+	payload := buildDepositLSTMessage(stakerAddr, tokenAddr, opAmount.BigInt())
+	batch := keeper.RawDataXChainBatch{
+		SrcChainID: srcChainID,
+		BatchSeq:   1,
+		Messages: []keeper.RawDataXChainMsg{
+			{
+				ID:         "xmsg:deposit:0",
+				Nonce:      1,
+				Type:       "evm",
+				PayloadB64: base64.StdEncoding.EncodeToString(payload),
+			},
+		},
+	}
+	rawData, err := json.Marshal(batch)
+	s.Require().NoError(err)
+
+	mt, err := oracletypes.DeriveMT(uint32(paramsRes.Params.PieceSizeByte), rawData)
+	s.Require().NoError(err)
+	rootHash := mt.RootHash()
+	leafCount := mt.LeafCount()
+
+	_, ps := priceNST1.generateRealTimeStructs("1", 1)
+	leafCountStr := strconv.Itoa(int(leafCount))
+	ps.Prices[0].Price = string(append(rootHash, leafCountStr...))
+
+	msg0 := oracletypes.NewMsgCreatePrice2Phase(creator0.String(), feederID, []*oracletypes.PriceSource{&ps}, uint64(baseBlock), 1)
+	msg1 := oracletypes.NewMsgCreatePrice2Phase(creator1.String(), feederID, []*oracletypes.PriceSource{&ps}, uint64(baseBlock), 1)
+	msg2 := oracletypes.NewMsgCreatePrice2Phase(creator2.String(), feederID, []*oracletypes.PriceSource{&ps}, uint64(baseBlock), 1)
+	s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg0}, "valconskey0", kr0))
+	s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg1}, "valconskey1", kr1))
+	s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg2}, "valconskey2", kr2))
+
+	phaseTwoStart := baseBlock + int64(paramsRes.Params.MaxNonce)
+	s.moveToAndCheck(phaseTwoStart)
+	// Allow the 2nd-phase state (nextPieceIndex) to be initialized.
+	s.moveNAndCheck(1)
+
+	pieces, ok := mt.CollectedPieces()
+	s.Require().True(ok)
+	for i, piece := range pieces {
+		proof := mt.MinimalProofByIndex(uint32(i))
+		idxStr, hashStr := proof.FlattenString()
+		_, ps2 := priceNST1.generateRealTimeStructs("1", 1)
+		ps2.Prices[0].Price = string(piece)
+		ps2.Prices[0].DetID = strconv.Itoa(i)
+		if len(idxStr) > 0 {
+			ps2.Prices = append(ps2.Prices, &oracletypes.PriceTimeDetID{
+				Price:     hashStr,
+				DetID:     idxStr,
+				Timestamp: now,
+			})
+		}
+
+		msg0 = oracletypes.NewMsgCreatePrice2Phase2(creator0.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
+		msg1 = oracletypes.NewMsgCreatePrice2Phase2(creator1.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
+		msg2 = oracletypes.NewMsgCreatePrice2Phase2(creator2.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
+		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg0}, "valconskey0", kr0))
+		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg1}, "valconskey1", kr1))
+		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg2}, "valconskey2", kr2))
+		s.moveNAndCheck(1)
+	}
+
+	// Allow EndBlock queue processing to complete.
+	s.moveNAndCheck(2)
+
+	execSeq := s.queryXChainLastExecutedSeq(srcChainID)
+	s.Require().EqualValues(1, execSeq)
+
+	processed := s.queryOracleStore(oracletypes.XChainMsgProcessedKey(srcChainID, "xmsg:deposit:0"))
+	s.Require().Greater(len(processed), 0)
+
+	after := s.queryStakerTotalDeposited(ctx, stakerID, assetID)
+	s.T().Logf("deposit delta: stakerID=%s assetID=%s before=%s after=%s", stakerID, assetID, before, after)
+	s.Require().True(after.Sub(before).Equal(opAmount))
+}
+
+func (s *E2ETestSuite) mustGetXChainFeeder(params oracletypes.Params) (feederID uint64, startBaseBlock uint64, interval uint64) {
+	var tokenID uint64
+	for i, token := range params.Tokens {
+		if strings.HasPrefix(strings.ToLower(token.AssetID), oracletypes.XChainIDPrefix) {
+			tokenID = uint64(i)
+			break
+		}
+	}
+	s.Require().Greater(tokenID, uint64(0))
+
+	for i, feeder := range params.TokenFeeders {
+		if feeder.TokenID == tokenID {
+			return uint64(i), feeder.StartBaseBlock, feeder.Interval
+		}
+	}
+
+	s.FailNow("xchain feeder not found in params")
+	return 0, 0, 0
+}
+
+func (s *E2ETestSuite) nextBaseBlock(startBaseBlock uint64, interval uint64) int64 {
+	height, err := s.network.LatestStateHeight()
+	s.Require().NoError(err)
+	if height <= int64(startBaseBlock) {
+		return int64(startBaseBlock)
+	}
+	if interval == 0 {
+		return height
+	}
+	// Move to the next base block >= current height.
+	delta := height - int64(startBaseBlock)
+	rounds := delta / int64(interval)
+	baseBlock := int64(startBaseBlock) + rounds*int64(interval)
+	if baseBlock < height {
+		baseBlock += int64(interval)
+	}
+	return baseBlock
+}
+
+func buildDepositLSTMessage(staker common.Address, token common.Address, amount *big.Int) []byte {
+	msg := make([]byte, 1+32+32+32)
+	msg[0] = 2 // REQUEST_DEPOSIT_LST in GatewayStorage.Action
+
+	stakerBz := network.PaddingAddressTo32(staker)
+	tokenBz := network.PaddingAddressTo32(token)
+	amountBz := make([]byte, 32)
+	amount.FillBytes(amountBz)
+
+	copy(msg[1:33], stakerBz)
+	copy(msg[33:65], amountBz)
+	copy(msg[65:97], tokenBz)
+
+	return msg
+}
+
+func (s *E2ETestSuite) deployOracleGateway(oracleCaller common.Address) common.Address {
+	addr, err := s.network.DeployOracleGatewayContract(oracleCaller)
+	s.Require().NoError(err)
+	// Allow the deployment tx to be included.
+	s.moveNAndCheck(1)
+	return addr
+}
+
+func (s *E2ETestSuite) queryStakerTotalDeposited(ctx context.Context, stakerID, assetID string) sdkmath.Int {
+	res, err := s.network.QueryAssets().QueryStakerBalance(ctx, &assetstypes.QueryStakerBalanceRequest{
+		StakerId: stakerID,
+		AssetId:  assetID,
+	})
+	s.Require().NoError(err)
+	s.Require().NotNil(res.StakerBalance)
+	return res.StakerBalance.TotalDeposited
+}
+
+func (s *E2ETestSuite) queryXChainLastExecutedSeq(srcChainID uint64) uint64 {
+	value := s.queryOracleStore(oracletypes.XChainLastExecutedSeqKey(srcChainID))
+	seq, err := oracletypes.BytesToUint64(value)
+	s.Require().NoError(err)
+	return seq
+}
+
+func (s *E2ETestSuite) queryOracleStore(key []byte) []byte {
+	res, err := s.network.Validators[0].RPCClient.ABCIQuery(context.Background(), "/store/oracle/key", key)
+	s.Require().NoError(err)
+	return res.Response.Value
+}

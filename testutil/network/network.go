@@ -508,6 +508,16 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		CodeHash:    common.BytesToHash(evmtypes.EmptyCodeHash).Hex(),
 	})
 
+	// Fund the EVM deployer address used in tests (tx_precompile.go) if it's distinct.
+	deployerAddr := sdk.AccAddress(callAddr.Bytes())
+	if deployerAddr.String() != gateWayAddressStr {
+		genBalances = append(genBalances, banktypes.Balance{Address: deployerAddr.String(), Coins: balances.Sort()})
+		genAccounts = append(genAccounts, &evmostypes.EthAccount{
+			BaseAccount: authtypes.NewBaseAccount(deployerAddr, nil, 0, 0),
+			CodeHash:    common.BytesToHash(evmtypes.EmptyCodeHash).Hex(),
+		})
+	}
+
 	err = initGenFiles(cfg, genAccounts, genBalances, genFiles, network.Validators, commissionRate)
 	if err != nil {
 		return nil, err
