@@ -36,6 +36,7 @@ type XChainPriceFeederSuite struct {
 }
 
 func TestXChainPriceFeederIntegration(t *testing.T) {
+	shouldSkipXChainPriceFeederIntegration(t)
 	ensureXChainGenesis()
 	limitOracleFeedersToXChain()
 	cfg := network.DefaultConfig()
@@ -43,6 +44,31 @@ func TestXChainPriceFeederIntegration(t *testing.T) {
 	cfg.CleanupDir = true
 	cfg.EnableTMLogging = true
 	suite.Run(t, &XChainPriceFeederSuite{cfg: cfg})
+}
+
+func shouldSkipXChainPriceFeederIntegration(t *testing.T) {
+	t.Helper()
+	if os.Getenv("RUN_XCHAIN_PRICEFEEDER_IT") == "1" {
+		return
+	}
+	if _, err := exec.LookPath("anvil"); err != nil {
+		t.Skipf("anvil not found: %v (set RUN_XCHAIN_PRICEFEEDER_IT=1 to require)", err)
+	}
+	if _, err := exec.LookPath("forge"); err != nil {
+		t.Skipf("forge not found: %v (set RUN_XCHAIN_PRICEFEEDER_IT=1 to require)", err)
+	}
+	if _, err := exec.LookPath("cast"); err != nil {
+		t.Skipf("cast not found: %v (set RUN_XCHAIN_PRICEFEEDER_IT=1 to require)", err)
+	}
+	repoRoot := findRepoRoot(t)
+	priceFeederHome := getenvDefault("PRICE_FEEDER_HOME", filepath.Join(repoRoot, "..", "price-feeder"))
+	if _, err := os.Stat(priceFeederHome); err != nil {
+		t.Skipf("price-feeder repo not found at %s: %v (set PRICE_FEEDER_HOME or RUN_XCHAIN_PRICEFEEDER_IT=1)", priceFeederHome, err)
+	}
+	contractsHome := getenvDefault("IMUA_CONTRACTS_HOME", filepath.Join(repoRoot, "..", "imua-contracts"))
+	if _, err := os.Stat(contractsHome); err != nil {
+		t.Skipf("imua-contracts repo not found at %s: %v (set IMUA_CONTRACTS_HOME or RUN_XCHAIN_PRICEFEEDER_IT=1)", contractsHome, err)
+	}
 }
 
 func (s *XChainPriceFeederSuite) SetupSuite() {

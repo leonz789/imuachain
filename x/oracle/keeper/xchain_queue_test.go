@@ -7,12 +7,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/crypto"
-	keepertest "github.com/imua-xyz/imuachain/testutil/keeper"
 	"github.com/stretchr/testify/require"
 )
 
 func TestProcessXChainQueue_SkipInvalidPayload(t *testing.T) {
-	k, ctx := keepertest.OracleKeeper(t)
+	k, ctx := MockOracleKeeper(t)
 
 	srcChainID := uint64(7)
 	qb := xchainQueuedBatch{
@@ -40,7 +39,7 @@ func TestProcessXChainQueue_SkipInvalidPayload(t *testing.T) {
 }
 
 func TestProcessXChainQueue_PersistsNextIndex(t *testing.T) {
-	k, ctx := keepertest.OracleKeeper(t)
+	k, ctx := MockOracleKeeper(t)
 
 	srcChainID := uint64(8)
 	msgs := make([]RawDataXChainMsg, 0, 60)
@@ -76,7 +75,7 @@ func TestProcessXChainQueue_PersistsNextIndex(t *testing.T) {
 }
 
 func TestDequeueXChainBatch_FIFO(t *testing.T) {
-	k, ctx := keepertest.OracleKeeper(t)
+	k, ctx := MockOracleKeeper(t)
 
 	srcChainID := uint64(9)
 	require.NoError(t, k.enqueueXChainBatch(ctx, srcChainID, xchainQueuedBatch{
