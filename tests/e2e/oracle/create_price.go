@@ -299,6 +299,8 @@ func (s *E2ETestSuite) testCreatePriceNST() {
 	err = s.network.SendPrecompileTx(network.ASSETS, "depositNST", clientChainID, validatorPubkey, stakerAddr, opAmount)
 	s.Require().NoError(err)
 	ctx := context.Background()
+	paramsRes, err := s.network.QueryOracle().Params(ctx, &oracletypes.QueryParamsRequest{})
+	s.Require().NoError(err)
 
 	// slashing_{miss_v3:1, window:1} [1]
 	s.moveToAndCheck(7)
@@ -354,8 +356,14 @@ func (s *E2ETestSuite) testCreatePriceNST() {
 		},
 	}, *resStakerInfo.StakerInfo)
 
-	// new block - 8, send message with rawData piece to complete nst 2nd phase aggregation
-	s.moveToAndCheck(8)
+	phaseTwoStart := int64(7) + int64(paramsRes.Params.MaxNonce)
+	if currentHeight, err := s.network.LatestStateHeight(); err == nil && currentHeight < phaseTwoStart {
+		s.moveToAndCheck(phaseTwoStart)
+	}
+	// Allow the 2nd-phase state (nextPieceIndex) to be initialized.
+	s.moveNAndCheck(1)
+
+	// send message with rawData piece to complete nst 2nd phase aggregation
 	ps.Prices[0].Price = string(pieces[0])
 	ps.Prices[0].DetID = "0"
 	msg0 = oracletypes.NewMsgCreatePrice2Phase2(creator0.String(), 2, []*oracletypes.PriceSource{&ps}, 7, 1)

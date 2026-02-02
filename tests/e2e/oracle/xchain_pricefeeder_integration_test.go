@@ -108,7 +108,7 @@ func (s *XChainPriceFeederSuite) TestCrossChainPriceFeederDepositLST() {
 	opAmount := sdkmath.NewInt(1000)
 
 	stakerID, assetID := assetstypes.GetStakerIDAndAssetID(
-		uint64(network.TestEVMChainID),
+		network.TestEVMChainID,
 		stakerAddr.Bytes(),
 		tokenAddr.Bytes(),
 	)
@@ -122,7 +122,7 @@ func (s *XChainPriceFeederSuite) TestCrossChainPriceFeederDepositLST() {
 		s.network,
 		rpcURL,
 		emitterAddr,
-		uint64(network.TestEVMChainID),
+		network.TestEVMChainID,
 	)
 
 	pfBin := buildPriceFeeder(s.T(), priceFeederHome, tmpDir)
@@ -149,7 +149,7 @@ func (s *XChainPriceFeederSuite) TestCrossChainPriceFeederDepositLST() {
 	s.moveNAndCheck(3)
 
 	s.Require().Eventually(func() bool {
-		seq := s.queryXChainLastExecutedSeq(uint64(network.TestEVMChainID))
+		seq := s.queryXChainLastExecutedSeq(network.TestEVMChainID)
 		s.T().Logf("waiting for xchain execution: lastExecutedSeq=%d", seq)
 		return seq >= 1
 	}, 2*time.Minute, 2*time.Second)

@@ -12,8 +12,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/ethereum/go-ethereum/common"
-	keeper "github.com/imua-xyz/imuachain/x/oracle/keeper"
 	assetstypes "github.com/imua-xyz/imuachain/x/assets/types"
+	keeper "github.com/imua-xyz/imuachain/x/oracle/keeper"
 	oracletypes "github.com/imua-xyz/imuachain/x/oracle/types"
 
 	"github.com/imua-xyz/imuachain/testutil/network"
@@ -47,7 +47,7 @@ func (s *E2ETestSuite) TestCrossChainOracle2Phases() {
 	baseBlock := s.nextBaseBlock(startBaseBlock, interval)
 	s.moveToAndCheck(baseBlock)
 
-	srcChainID := uint64(network.TestEVMChainID)
+	var srcChainID uint64 = network.TestEVMChainID
 	batch := keeper.RawDataXChainBatch{
 		SrcChainID: srcChainID,
 		BatchSeq:   1,
@@ -69,7 +69,7 @@ func (s *E2ETestSuite) TestCrossChainOracle2Phases() {
 	rawData, err := json.Marshal(batch)
 	s.Require().NoError(err)
 
-	mt, err := oracletypes.DeriveMT(uint32(paramsRes.Params.PieceSizeByte), rawData)
+	mt, err := oracletypes.DeriveMT(paramsRes.Params.PieceSizeByte, rawData)
 	s.Require().NoError(err)
 	rootHash := mt.RootHash()
 	leafCount := mt.LeafCount()
@@ -90,30 +90,7 @@ func (s *E2ETestSuite) TestCrossChainOracle2Phases() {
 	// Allow the 2nd-phase state (nextPieceIndex) to be initialized.
 	s.moveNAndCheck(1)
 
-	pieces, ok := mt.CollectedPieces()
-	s.Require().True(ok)
-	for i, piece := range pieces {
-		proof := mt.MinimalProofByIndex(uint32(i))
-		idxStr, hashStr := proof.FlattenString()
-		_, ps2 := priceNST1.generateRealTimeStructs("1", 1)
-		ps2.Prices[0].Price = string(piece)
-		ps2.Prices[0].DetID = strconv.Itoa(i)
-		if len(idxStr) > 0 {
-			ps2.Prices = append(ps2.Prices, &oracletypes.PriceTimeDetID{
-				Price:     hashStr,
-				DetID:     idxStr,
-				Timestamp: now,
-			})
-		}
-
-		msg0 = oracletypes.NewMsgCreatePrice2Phase2(creator0.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
-		msg1 = oracletypes.NewMsgCreatePrice2Phase2(creator1.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
-		msg2 = oracletypes.NewMsgCreatePrice2Phase2(creator2.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
-		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg0}, "valconskey0", kr0))
-		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg1}, "valconskey1", kr1))
-		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg2}, "valconskey2", kr2))
-		s.moveNAndCheck(1)
-	}
+	s.submitXChainPhaseTwoPieces(mt, feederID, baseBlock)
 
 	// Allow EndBlock queue processing to complete.
 	s.moveNAndCheck(2)
@@ -153,7 +130,7 @@ func (s *E2ETestSuite) TestCrossChainOracle2PhasesDepositLST() {
 	baseBlock := s.nextBaseBlock(startBaseBlock, interval)
 	s.moveToAndCheck(baseBlock)
 
-	srcChainID := uint64(network.TestEVMChainID)
+	var srcChainID uint64 = network.TestEVMChainID
 	stakerAddr := common.BytesToAddress(s.network.Validators[0].Address.Bytes())
 	tokenAddr := common.HexToAddress(network.ETHAssetAddress)
 	opAmount := sdkmath.NewInt(1000)
@@ -181,7 +158,7 @@ func (s *E2ETestSuite) TestCrossChainOracle2PhasesDepositLST() {
 	rawData, err := json.Marshal(batch)
 	s.Require().NoError(err)
 
-	mt, err := oracletypes.DeriveMT(uint32(paramsRes.Params.PieceSizeByte), rawData)
+	mt, err := oracletypes.DeriveMT(paramsRes.Params.PieceSizeByte, rawData)
 	s.Require().NoError(err)
 	rootHash := mt.RootHash()
 	leafCount := mt.LeafCount()
@@ -202,30 +179,7 @@ func (s *E2ETestSuite) TestCrossChainOracle2PhasesDepositLST() {
 	// Allow the 2nd-phase state (nextPieceIndex) to be initialized.
 	s.moveNAndCheck(1)
 
-	pieces, ok := mt.CollectedPieces()
-	s.Require().True(ok)
-	for i, piece := range pieces {
-		proof := mt.MinimalProofByIndex(uint32(i))
-		idxStr, hashStr := proof.FlattenString()
-		_, ps2 := priceNST1.generateRealTimeStructs("1", 1)
-		ps2.Prices[0].Price = string(piece)
-		ps2.Prices[0].DetID = strconv.Itoa(i)
-		if len(idxStr) > 0 {
-			ps2.Prices = append(ps2.Prices, &oracletypes.PriceTimeDetID{
-				Price:     hashStr,
-				DetID:     idxStr,
-				Timestamp: now,
-			})
-		}
-
-		msg0 = oracletypes.NewMsgCreatePrice2Phase2(creator0.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
-		msg1 = oracletypes.NewMsgCreatePrice2Phase2(creator1.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
-		msg2 = oracletypes.NewMsgCreatePrice2Phase2(creator2.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
-		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg0}, "valconskey0", kr0))
-		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg1}, "valconskey1", kr1))
-		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg2}, "valconskey2", kr2))
-		s.moveNAndCheck(1)
-	}
+	s.submitXChainPhaseTwoPieces(mt, feederID, baseBlock)
 
 	// Allow EndBlock queue processing to complete.
 	s.moveNAndCheck(2)
@@ -294,6 +248,33 @@ func buildDepositLSTMessage(staker common.Address, token common.Address, amount 
 	copy(msg[65:97], tokenBz)
 
 	return msg
+}
+
+func (s *E2ETestSuite) submitXChainPhaseTwoPieces(mt *oracletypes.MerkleTree, feederID uint64, baseBlock int64) {
+	pieces, ok := mt.CollectedPieces()
+	s.Require().True(ok)
+	for i, piece := range pieces {
+		proof := mt.MinimalProofByIndex(uint32(i))
+		idxStr, hashStr := proof.FlattenString()
+		_, ps2 := priceNST1.generateRealTimeStructs("1", 1)
+		ps2.Prices[0].Price = string(piece)
+		ps2.Prices[0].DetID = strconv.Itoa(i)
+		if len(idxStr) > 0 {
+			ps2.Prices = append(ps2.Prices, &oracletypes.PriceTimeDetID{
+				Price:     hashStr,
+				DetID:     idxStr,
+				Timestamp: now,
+			})
+		}
+
+		msg0 := oracletypes.NewMsgCreatePrice2Phase2(creator0.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
+		msg1 := oracletypes.NewMsgCreatePrice2Phase2(creator1.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
+		msg2 := oracletypes.NewMsgCreatePrice2Phase2(creator2.String(), feederID, []*oracletypes.PriceSource{&ps2}, uint64(baseBlock), 1)
+		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg0}, "valconskey0", kr0))
+		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg1}, "valconskey1", kr1))
+		s.Require().NoError(s.network.SendTxOracleCreateprice([]sdk.Msg{msg2}, "valconskey2", kr2))
+		s.moveNAndCheck(1)
+	}
 }
 
 func (s *E2ETestSuite) deployOracleGateway(oracleCaller common.Address) common.Address {
