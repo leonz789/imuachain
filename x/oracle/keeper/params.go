@@ -198,6 +198,9 @@ func (k Keeper) RegisterNewTokenAndSetTokenFeeder(ctx sdk.Context, oInfo *types.
 //	- First quoting block = 5 + 1 = 6
 //	- Quoting window = {6, 7, 8}
 func GetStartBaseBlock(firstQuotingHeight, window, interval uint64, tfs []*types.TokenFeeder) uint64 {
+	if interval == 0 {
+		return 0
+	}
 	blocks := make([]uint64, interval)
 	scanEnd := firstQuotingHeight + interval
 	for _, tf := range tfs {
