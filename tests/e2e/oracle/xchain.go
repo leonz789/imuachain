@@ -19,7 +19,7 @@ import (
 	"github.com/imua-xyz/imuachain/testutil/network"
 )
 
-func (s *E2ETestSuite) TestCrossChainOracle2Phases() {
+func (s *XChainTestSuite) TestCrossChainOracle2PhasesA() {
 	// Ensure local keyring/creator are initialized regardless of test order.
 	kr0 = s.network.Validators[0].ClientCtx.Keyring
 	creator0 = sdk.AccAddress(s.network.Validators[0].PubKey.Address())
@@ -34,7 +34,7 @@ func (s *E2ETestSuite) TestCrossChainOracle2Phases() {
 
 	feederID, startBaseBlock, interval := s.mustGetXChainFeeder(paramsRes.Params)
 	oracleCaller := common.BytesToAddress(authtypes.NewModuleAddress(oracletypes.ModuleName))
-	gatewayAddr := s.deployOracleGateway(oracleCaller)
+	gatewayAddr := s.ensureOracleGateway(oracleCaller)
 	s.Require().Equal(strings.ToLower(network.ExpectedOracleGatewayAddress().Hex()), strings.ToLower(gatewayAddr.Hex()))
 
 	currentHeight, err := s.network.LatestStateHeight()
@@ -95,14 +95,14 @@ func (s *E2ETestSuite) TestCrossChainOracle2Phases() {
 	// Allow EndBlock queue processing to complete.
 	s.moveNAndCheck(2)
 
-	execSeq := s.queryXChainLastExecutedSeq(srcChainID)
+	execSeq := s.waitForXChainLastExecutedSeq(srcChainID, 1)
 	s.Require().EqualValues(1, execSeq)
 
 	processed := s.queryOracleStore(oracletypes.XChainMsgProcessedKey(srcChainID, "xmsg:0"))
 	s.Require().Greater(len(processed), 0)
 }
 
-func (s *E2ETestSuite) TestCrossChainOracle2PhasesDepositLST() {
+func (s *XChainTestSuite) TestCrossChainOracle2PhasesDepositLST() {
 	// Ensure local keyring/creator are initialized regardless of test order.
 	kr0 = s.network.Validators[0].ClientCtx.Keyring
 	creator0 = sdk.AccAddress(s.network.Validators[0].PubKey.Address())
@@ -117,7 +117,7 @@ func (s *E2ETestSuite) TestCrossChainOracle2PhasesDepositLST() {
 
 	feederID, startBaseBlock, interval := s.mustGetXChainFeeder(paramsRes.Params)
 	oracleCaller := common.BytesToAddress(authtypes.NewModuleAddress(oracletypes.ModuleName))
-	gatewayAddr := s.deployOracleGateway(oracleCaller)
+	gatewayAddr := s.ensureOracleGateway(oracleCaller)
 	s.Require().Equal(strings.ToLower(network.ExpectedOracleGatewayAddress().Hex()), strings.ToLower(gatewayAddr.Hex()))
 
 	currentHeight, err := s.network.LatestStateHeight()
@@ -184,7 +184,7 @@ func (s *E2ETestSuite) TestCrossChainOracle2PhasesDepositLST() {
 	// Allow EndBlock queue processing to complete.
 	s.moveNAndCheck(2)
 
-	execSeq := s.queryXChainLastExecutedSeq(srcChainID)
+	execSeq := s.waitForXChainLastExecutedSeq(srcChainID, 1)
 	s.Require().EqualValues(1, execSeq)
 
 	processed := s.queryOracleStore(oracletypes.XChainMsgProcessedKey(srcChainID, "xmsg:deposit:0"))
@@ -195,7 +195,7 @@ func (s *E2ETestSuite) TestCrossChainOracle2PhasesDepositLST() {
 	s.Require().True(after.Sub(before).Equal(opAmount))
 }
 
-func (s *E2ETestSuite) mustGetXChainFeeder(params oracletypes.Params) (feederID uint64, startBaseBlock uint64, interval uint64) {
+func (s *XChainTestSuite) mustGetXChainFeeder(params oracletypes.Params) (feederID uint64, startBaseBlock uint64, interval uint64) {
 	var tokenID uint64
 	for i, token := range params.Tokens {
 		if strings.HasPrefix(strings.ToLower(token.AssetID), oracletypes.XChainIDPrefix) {
@@ -215,7 +215,7 @@ func (s *E2ETestSuite) mustGetXChainFeeder(params oracletypes.Params) (feederID 
 	return 0, 0, 0
 }
 
-func (s *E2ETestSuite) nextBaseBlock(startBaseBlock uint64, interval uint64) int64 {
+func (s *XChainTestSuite) nextBaseBlock(startBaseBlock uint64, interval uint64) int64 {
 	height, err := s.network.LatestStateHeight()
 	s.Require().NoError(err)
 	if height <= int64(startBaseBlock) {
@@ -250,7 +250,7 @@ func buildDepositLSTMessage(staker common.Address, token common.Address, amount 
 	return msg
 }
 
-func (s *E2ETestSuite) submitXChainPhaseTwoPieces(mt *oracletypes.MerkleTree, feederID uint64, baseBlock int64) {
+func (s *XChainTestSuite) submitXChainPhaseTwoPieces(mt *oracletypes.MerkleTree, feederID uint64, baseBlock int64) {
 	pieces, ok := mt.CollectedPieces()
 	s.Require().True(ok)
 	for i, piece := range pieces {
@@ -277,15 +277,7 @@ func (s *E2ETestSuite) submitXChainPhaseTwoPieces(mt *oracletypes.MerkleTree, fe
 	}
 }
 
-func (s *E2ETestSuite) deployOracleGateway(oracleCaller common.Address) common.Address {
-	addr, err := s.network.DeployOracleGatewayContract(oracleCaller)
-	s.Require().NoError(err)
-	// Allow the deployment tx to be included.
-	s.moveNAndCheck(1)
-	return addr
-}
-
-func (s *E2ETestSuite) queryStakerTotalDeposited(ctx context.Context, stakerID, assetID string) sdkmath.Int {
+func (s *XChainTestSuite) queryStakerTotalDeposited(ctx context.Context, stakerID, assetID string) sdkmath.Int {
 	res, err := s.network.QueryAssets().QueryStakerBalance(ctx, &assetstypes.QueryStakerBalanceRequest{
 		StakerId: stakerID,
 		AssetId:  assetID,
@@ -295,15 +287,43 @@ func (s *E2ETestSuite) queryStakerTotalDeposited(ctx context.Context, stakerID, 
 	return res.StakerBalance.TotalDeposited
 }
 
-func (s *E2ETestSuite) queryXChainLastExecutedSeq(srcChainID uint64) uint64 {
+func (s *XChainTestSuite) queryXChainLastExecutedSeq(srcChainID uint64) (uint64, bool) {
 	value := s.queryOracleStore(oracletypes.XChainLastExecutedSeqKey(srcChainID))
+	if len(value) == 0 {
+		return 0, false
+	}
 	seq, err := oracletypes.BytesToUint64(value)
 	s.Require().NoError(err)
-	return seq
+	return seq, true
 }
 
-func (s *E2ETestSuite) queryOracleStore(key []byte) []byte {
+func (s *XChainTestSuite) queryOracleStore(key []byte) []byte {
 	res, err := s.network.Validators[0].RPCClient.ABCIQuery(context.Background(), "/store/oracle/key", key)
 	s.Require().NoError(err)
 	return res.Response.Value
+}
+
+func (s *XChainTestSuite) ensureOracleGateway(oracleCaller common.Address) common.Address {
+	if (s.gatewayAddr != common.Address{}) {
+		return s.gatewayAddr
+	}
+	addr, err := s.network.DeployOracleGatewayContract(oracleCaller)
+	s.Require().NoError(err)
+	// Allow the deployment tx to be included.
+	s.moveNAndCheck(1)
+	s.gatewayAddr = addr
+	return addr
+}
+
+func (s *XChainTestSuite) waitForXChainLastExecutedSeq(srcChainID uint64, expected uint64) uint64 {
+	for i := 0; i < 10; i++ {
+		if seq, ok := s.queryXChainLastExecutedSeq(srcChainID); ok {
+			if seq == expected {
+				return seq
+			}
+		}
+		s.moveNAndCheck(1)
+	}
+	s.FailNow("xchain last executed seq not updated")
+	return 0
 }

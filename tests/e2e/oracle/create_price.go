@@ -36,7 +36,7 @@ var (
 // registerToken automatically through assets module when precompiled is called
 // slashing for downtime
 // slashing for malicious price
-func (s *E2ETestSuite) TestCreatePrice() {
+func (s *CreatePriceSuite) TestCreatePrice() {
 	kr0 = s.network.Validators[0].ClientCtx.Keyring
 	creator0 = sdk.AccAddress(s.network.Validators[0].PubKey.Address())
 
@@ -68,7 +68,7 @@ func (s *E2ETestSuite) TestCreatePrice() {
 	}
 }
 
-func (s *E2ETestSuite) testCreatePriceLSTAfterDelegationChangePower() {
+func (s *CreatePriceSuite) testCreatePriceLSTAfterDelegationChangePower() {
 	s.moveToAndCheck(80)
 	priceTest1R1 := price2.updateTimestamp()
 	priceTimeDetID1R1 := priceTest1R1.getPriceTimeDetID("9")
@@ -138,7 +138,7 @@ we need more than 2/3 power, so that at least 3 out of 4 validators power should
 
 --- nonce:
 */
-func (s *E2ETestSuite) testCreatePriceLST() {
+func (s *CreatePriceSuite) testCreatePriceLST() {
 	priceTest1R1 := price1.updateTimestamp()
 	priceTimeDetID1R1 := priceTest1R1.getPriceTimeDetID("9")
 	priceSource1R1 := oracletypes.PriceSource{
@@ -284,7 +284,7 @@ func (s *E2ETestSuite) testCreatePriceLST() {
 	s.Require().Equal(ret, res.Price)
 }
 
-func (s *E2ETestSuite) testCreatePriceNST() {
+func (s *CreatePriceSuite) testCreatePriceNST() {
 	clientChainID := uint32(101)
 	validatorPubkey := []byte{1}
 	// this is just a fake address
@@ -398,7 +398,7 @@ func (s *E2ETestSuite) testCreatePriceNST() {
 	}, resStakerInfo.StakerInfo.BalanceList)
 }
 
-func (s *E2ETestSuite) testSlashing() {
+func (s *CreatePriceSuite) testSlashing() {
 	// validator3 had already missed two rounds
 	// 1. for NST balance change update round 1
 	// 2. for LST round round 3, but rounds had reached to 4 which equals to reportWindow
@@ -460,7 +460,7 @@ func (s *E2ETestSuite) testSlashing() {
 	s.Require().False(resOperator.Jailed)
 }
 
-func (s *E2ETestSuite) testRegisterTokenThroughPrecompile() {
+func (s *CreatePriceSuite) testRegisterTokenThroughPrecompile() {
 	s.moveToAndCheck(2)
 	clientChainID := uint32(101)
 	assetAddr := common.HexToAddress("0xB82381A3fBD3FaFA77B3a7bE693342618240065b")
@@ -481,12 +481,12 @@ func (s *E2ETestSuite) testRegisterTokenThroughPrecompile() {
 	s.Require().Equal(name, res.Params.Tokens[len(res.Params.Tokens)-1].Name)
 }
 
-func (s *E2ETestSuite) moveToAndCheck(height int64) {
+func (s *CreatePriceSuite) moveToAndCheck(height int64) {
 	_, err := s.network.WaitForStateHeightWithTimeout(height, 120*time.Second)
 	s.Require().NoError(err)
 }
 
-func (s *E2ETestSuite) moveNAndCheck(n int64) {
+func (s *CreatePriceSuite) moveNAndCheck(n int64) {
 	for i := int64(0); i < n; i++ {
 		err := s.network.WaitForStateNextBlock()
 		s.Require().NoError(err)

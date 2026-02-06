@@ -7,10 +7,12 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestCreatePriceSuite(t *testing.T) {
+func TestXChainSuite(t *testing.T) {
+	ensureXChainGenesis()
+	limitOracleFeedersToXChain()
 	cfg := network.DefaultConfig()
-	cfg.NumValidators = 4
+	cfg.NumValidators = 3
 	cfg.CleanupDir = true
 	cfg.EnableTMLogging = true
-	suite.Run(t, NewCreatePriceSuite(cfg))
+	suite.Run(t, NewXChainTestSuite(cfg))
 }

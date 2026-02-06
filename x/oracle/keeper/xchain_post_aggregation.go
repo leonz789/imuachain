@@ -101,6 +101,7 @@ func UpdateXChainMsgs(
 
 	batch.Messages = msgs
 	k.SetXChainLastSeq(ctx, batch.SrcChainID, batch.BatchSeq)
+	fmt.Println("debug(leonz)--------->SetXChainLastSeq", batch.SrcChainID, batch.BatchSeq)
 
 	if err := k.enqueueXChainBatch(ctx, batch.SrcChainID, xchainQueuedBatch{
 		RootHashB64: base64.StdEncoding.EncodeToString(rootHash),
