@@ -55,10 +55,12 @@ func (k Keeper) RegisterNewTokenAndSetTokenFeeder(ctx sdk.Context, oInfo *types.
 		// #nosec G115
 		chainID = uint64(len(p.Chains) - 1)
 	}
+
 	decimalInt, err := strconv.ParseInt(oInfo.Token.Decimal, 10, 32)
 	if err != nil {
 		return err
 	}
+
 	intervalInt := uint64(0)
 	if len(oInfo.Feeder.Interval) > 0 {
 		intervalInt, err = strconv.ParseUint(oInfo.Feeder.Interval, 10, 64)
@@ -87,6 +89,28 @@ func (k Keeper) RegisterNewTokenAndSetTokenFeeder(ctx sdk.Context, oInfo *types.
 		}
 	}()
 
+	addTokenAndFeeder := func(token *types.Token, ruleID uint64) {
+		p.Tokens = append(p.Tokens, token)
+		startBaseBlock := uint64(ctx.BlockHeight() + startAfterBlocks)
+		if len(p.TokenFeeders) > 1 {
+			offset := GetStartBaseBlock(startBaseBlock+1, uint64(p.MaxNonce), intervalInt, p.TokenFeeders[1:])
+			// GetStartBaseBlock returns an offset relative to `firstQuotingHeight = startBaseBlock + 1`.
+			//   newStartBaseBlock = startBaseBlock + offset => newStartBaseBlock + 1 = (startBaseBlock + 1) + offset
+			startBaseBlock += offset
+		}
+		// startBaseBlock := computeStartBaseBlock(ctx, uint64(p.MaxNonce), intervalInt, p.TokenFeeders[1:])
+		// #nosec G115 // len(p.Tokens) must be positive since we just append an element for it
+		// appendTokenFeeder(&p, uint64(len(p.Tokens)-1), ruleID, startBaseBlock, intervalInt)
+		p.TokenFeeders = append(p.TokenFeeders, &types.TokenFeeder{
+			TokenID:        uint64(len(p.Tokens) - 1),
+			RuleID:         ruleID,
+			StartRoundID:   1,
+			StartBaseBlock: startBaseBlock,
+			Interval:       intervalInt,
+			EndBlock:       0, // v1 does not set end block
+		})
+	}
+
 	idx, has := p.HasTokenByName(oInfo.Token.Name, chainID)
 	if has {
 		t := p.Tokens[idx]
@@ -97,59 +121,30 @@ func (k Keeper) RegisterNewTokenAndSetTokenFeeder(ctx sdk.Context, oInfo *types.
 		}
 	}
 
-	// add a new token
-	p.Tokens = append(p.Tokens, &types.Token{
-		Name:            oInfo.Token.Name,
-		ChainID:         chainID,
-		ContractAddress: oInfo.Token.Contract,
-		Decimal:         int32(decimalInt), // #nosec G115
-		Active:          true,
-		AssetID:         oInfo.AssetID,
-	})
-	startBaseBlock := uint64(ctx.BlockHeight() + startAfterBlocks)
-	if len(p.TokenFeeders) > 1 {
-		offset := GetStartBaseBlock(startBaseBlock+1, uint64(p.MaxNonce), intervalInt, p.TokenFeeders[1:])
-		// GetStartBaseBlock returns an offset relative to `firstQuotingHeight = startBaseBlock + 1`.
-		//   newStartBaseBlock = startBaseBlock + offset => newStartBaseBlock + 1 = (startBaseBlock + 1) + offset
-		startBaseBlock += offset
+	if !has {
+		// add a new token
+		addTokenAndFeeder(&types.Token{
+			Name:            oInfo.Token.Name,
+			ChainID:         chainID,
+			ContractAddress: oInfo.Token.Contract,
+			Decimal:         int32(decimalInt), // #nosec G115
+			Active:          true,
+			AssetID:         oInfo.AssetID,
+		}, 2)
 	}
-	// set a tokenFeeder for the new token
-	p.TokenFeeders = append(p.TokenFeeders, &types.TokenFeeder{
-		// #nosec G115 // len(p.Tokens) must be positive since we just append an element for it
-		TokenID:      uint64(len(p.Tokens) - 1),
-		RuleID:       2,
-		StartRoundID: 1,
-		// #nosec G115
-		StartBaseBlock: startBaseBlock,
-		Interval:       intervalInt,
-		// we don't end feeders for v1
-		EndBlock: 0,
-	})
 
 	if isNST {
 		// set a virtual token for NST to track balance change
 		nstTokenName := types.NSTTokenPrefix + oInfo.Token.Name
 		if _, has := p.HasTokenByName(nstTokenName, chainID); !has {
 			nstAssetID := types.NSTIDPrefix + hexutil.EncodeUint64(clientChainID)
-			p.Tokens = append(p.Tokens, &types.Token{
+			addTokenAndFeeder(&types.Token{
 				Name:            nstTokenName,
 				ChainID:         chainID,
 				ContractAddress: "",
 				Decimal:         int32(decimalInt), // #nosec G115
 				AssetID:         nstAssetID,
-			})
-			// set tokenfeeder to track blanace change
-			p.TokenFeeders = append(p.TokenFeeders, &types.TokenFeeder{
-				// #nosec G115 // len(p.Tokens) must be positive since we just append an element for it
-				TokenID:      uint64(len(p.Tokens) - 1),
-				RuleID:       3,
-				StartRoundID: 1,
-				// #nosec G115
-				StartBaseBlock: startBaseBlock,
-				Interval:       intervalInt,
-				// we don't end feeders for v1
-				EndBlock: 0,
-			})
+			}, 3)
 		}
 	}
 
