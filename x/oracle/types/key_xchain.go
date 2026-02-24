@@ -15,6 +15,7 @@ const (
 	XChainQueueHeadPrefix = XChainQueuePrefix + "head/"
 	XChainQueueTailPrefix = XChainQueuePrefix + "tail/"
 	XChainQueueItemPrefix = XChainQueuePrefix + "item/"
+	XChainMsgRetryPrefix  = XChainPrefix + "retry/"
 )
 
 func XChainLastSeqKey(srcChainID uint64) []byte {
@@ -47,6 +48,16 @@ func XChainMsgProcessedKey(srcChainID uint64, msgID string) []byte {
 	sum := sha256.Sum256([]byte(msgID))
 	key := make([]byte, 0, len(XChainMsgPrefix)+8+len(sum))
 	key = append(key, []byte(XChainMsgPrefix)...)
+	key = append(key, Uint64Bytes(srcChainID)...)
+	key = append(key, sum[:]...)
+	return key
+}
+
+// XChainMsgRetryKey stores per-message retry counts.
+func XChainMsgRetryKey(srcChainID uint64, msgID string) []byte {
+	sum := sha256.Sum256([]byte(msgID))
+	key := make([]byte, 0, len(XChainMsgRetryPrefix)+8+len(sum))
+	key = append(key, []byte(XChainMsgRetryPrefix)...)
 	key = append(key, Uint64Bytes(srcChainID)...)
 	key = append(key, sum[:]...)
 	return key

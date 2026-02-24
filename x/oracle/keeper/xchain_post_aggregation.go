@@ -49,6 +49,7 @@ func UpdateXChainMsgs(
 	feederID, roundID uint64,
 	kInf common.KeeperOracle,
 ) error {
+	// TODO: check alive queue length, we don't want the queue to grow infinititely (or we want to use map(k->v, not k->list) instead of slice in the storage)
 	k, ok := kInf.(*Keeper)
 	if !ok {
 		return errors.New("input keeper interface type error")
@@ -91,10 +92,11 @@ func UpdateXChainMsgs(
 		unique[m.ID] = struct{}{}
 
 		// Validate payload encoding (execution happens later in EndBlock queue consumer).
-		if m.PayloadB64 != "" {
-			if _, err := base64.StdEncoding.DecodeString(m.PayloadB64); err != nil {
-				return fmt.Errorf("invalid xchain message payload_b64 for id:%s: %w", m.ID, err)
-			}
+		if m.PayloadB64 == "" {
+			return fmt.Errorf("invalid xchain message: empty payload_b64 for id:%s", m.ID)
+		}
+		if _, err := base64.StdEncoding.DecodeString(m.PayloadB64); err != nil {
+			return fmt.Errorf("invalid xchain message payload_b64 for id:%s: %w", m.ID, err)
 		}
 		msgs = append(msgs, m)
 	}
@@ -111,7 +113,7 @@ func UpdateXChainMsgs(
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
-		types.EventTypeCreatePrice,
+		types.EventTypeXChainBatch,
 		sdk.NewAttribute(types.AttributeKeyFeederID, strconv.FormatUint(feederID, 10)),
 		sdk.NewAttribute(types.AttributeKeyRoundID, strconv.FormatUint(roundID, 10)),
 		sdk.NewAttribute(types.AttributeKeyXChainSrcChainID, strconv.FormatUint(batch.SrcChainID, 10)),

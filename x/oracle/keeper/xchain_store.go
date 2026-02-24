@@ -52,3 +52,25 @@ func (k Keeper) SetXChainMsgProcessed(ctx sdk.Context, srcChainID uint64, msgID 
 	store := ctx.KVStore(k.storeKey)
 	store.Set(types.XChainMsgProcessedKey(srcChainID, msgID), []byte{1})
 }
+
+func (k Keeper) GetXChainMsgRetryCount(ctx sdk.Context, srcChainID uint64, msgID string) uint64 {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(types.XChainMsgRetryKey(srcChainID, msgID))
+	if bz == nil {
+		return 0
+	}
+	v, err := types.BytesToUint64(bz)
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
+func (k Keeper) SetXChainMsgRetryCount(ctx sdk.Context, srcChainID uint64, msgID string, count uint64) {
+	store := ctx.KVStore(k.storeKey)
+	store.Set(types.XChainMsgRetryKey(srcChainID, msgID), types.Uint64Bytes(count))
+}
+
+func (k Keeper) ClearXChainMsgRetryCount(ctx sdk.Context, srcChainID uint64, msgID string) {
+	ctx.KVStore(k.storeKey).Delete(types.XChainMsgRetryKey(srcChainID, msgID))
+}

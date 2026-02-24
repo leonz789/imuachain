@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"strconv"
 	"testing"
@@ -17,13 +18,14 @@ func TestUpdateXChainMsgs_Basic(t *testing.T) {
 	for i := 0; i < 32; i++ {
 		rootHash[i] = byte(i)
 	}
+	payload := base64.StdEncoding.EncodeToString([]byte{0x01})
 
 	batch := keeper.RawDataXChainBatch{
 		SrcChainID: 123,
 		BatchSeq:   1,
 		Messages: []keeper.RawDataXChainMsg{
-			{ID: "tx1:0", Nonce: 1, Type: "evm", PayloadB64: ""},
-			{ID: "tx1:0", Nonce: 1, Type: "evm", PayloadB64: ""}, // duplicate in same batch
+			{ID: "tx1:0", Nonce: 1, Type: "evm", PayloadB64: payload},
+			{ID: "tx1:0", Nonce: 1, Type: "evm", PayloadB64: payload}, // duplicate in same batch
 		},
 	}
 	raw, err := json.Marshal(batch)
@@ -85,8 +87,14 @@ func TestUpdateXChainMsgs_BudgetedDelivery(t *testing.T) {
 	rootHash := make([]byte, 32)
 
 	msgs := make([]keeper.RawDataXChainMsg, 0, 60)
+	payload := base64.StdEncoding.EncodeToString([]byte{0x01})
 	for i := 0; i < 60; i++ {
-		msgs = append(msgs, keeper.RawDataXChainMsg{ID: "m" + strconv.Itoa(i), Nonce: uint64(i + 1), Type: "evm"})
+		msgs = append(msgs, keeper.RawDataXChainMsg{
+			ID:         "m" + strconv.Itoa(i),
+			Nonce:      uint64(i + 1),
+			Type:       "evm",
+			PayloadB64: payload,
+		})
 	}
 	batch := keeper.RawDataXChainBatch{SrcChainID: 9, BatchSeq: 1, Messages: msgs}
 	raw, err := json.Marshal(batch)

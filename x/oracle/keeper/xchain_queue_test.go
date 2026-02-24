@@ -43,11 +43,13 @@ func TestProcessXChainQueue_PersistsNextIndex(t *testing.T) {
 
 	srcChainID := uint64(8)
 	msgs := make([]RawDataXChainMsg, 0, 60)
+	payload := base64.StdEncoding.EncodeToString([]byte{0x01})
 	for i := 0; i < 60; i++ {
 		msgs = append(msgs, RawDataXChainMsg{
-			ID:    "m" + strconv.Itoa(i),
-			Nonce: uint64(i + 1),
-			Type:  "evm",
+			ID:         "m" + strconv.Itoa(i),
+			Nonce:      uint64(i + 1),
+			Type:       "evm",
+			PayloadB64: payload,
 		})
 	}
 	qb := xchainQueuedBatch{

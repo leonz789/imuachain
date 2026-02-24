@@ -5,6 +5,8 @@ const (
 	EventTypeOracleLiveness     = "oracle_liveness"
 	EventTypeOracleSlash        = "oracle_slash"
 	EventTypeOracleUpdateParams = "oracle_update_params"
+	EventTypeXChainDelivery     = "xchain_delivery"
+	EventTypeXChainBatch        = "xchain_batch"
 
 	AttributeKeyFeederID         = "feeder_id"
 	AttributeKeyTokenID          = "token_id"
@@ -31,6 +33,7 @@ const (
 	// xchain budgeted delivery attributes
 	AttributeKeyXChainMsgID        = "xchain_msg_id"
 	AttributeKeyXChainPayloadBytes = "xchain_payload_bytes"
+	AttributeKeyXChainRetryCount   = "xchain_retry_count"
 	AttributeKeyValidatorKey       = "validator_key"
 	AttributeKeyMissedRounds       = "missed_rounds"
 	AttributeKeyHeight             = "height"

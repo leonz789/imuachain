@@ -18,7 +18,10 @@ import (
 )
 
 // NOTE: Version 1 budget is a consensus constant. Later this should become an on-chain param.
-const xchainMaxDeliveriesPerEndBlock = 50
+const (
+	xchainMaxDeliveriesPerEndBlock = 50
+	xchainMaxMsgRetries            = 2
+)
 
 type xchainQueuedBatch struct {
 	RootHashB64 string             `json:"root_hash_b64"`
@@ -104,25 +107,27 @@ func (k Keeper) setXChainQueueTail(ctx sdk.Context, srcChainID, tail uint64) {
 }
 
 func (k Keeper) enqueueXChainBatch(ctx sdk.Context, srcChainID uint64, qb xchainQueuedBatch) error {
-	store := ctx.KVStore(k.storeKey)
-	head := k.getXChainQueueHead(ctx, srcChainID)
-	tail := k.getXChainQueueTail(ctx, srcChainID)
-	if tail < head {
-		// corrupted; reset to empty to avoid panic / infinite loop
-		head, tail = 0, 0
-	}
-
-	// Ensure the head key exists so EndBlock can discover this srcChainID queue via prefix iteration.
-	if store.Get(types.XChainQueueHeadKey(srcChainID)) == nil {
-		k.setXChainQueueHead(ctx, srcChainID, head)
-	}
-
-	idx := tail
 	bz, err := json.Marshal(qb)
 	if err != nil {
 		return err
 	}
-	store.Set(types.XChainQueueItemKey(srcChainID, idx), bz)
+
+	store := ctx.KVStore(k.storeKey)
+	head := k.getXChainQueueHead(ctx, srcChainID)
+	tail := k.getXChainQueueTail(ctx, srcChainID)
+	var reset bool
+	if tail < head {
+		// corrupted; reset to empty to avoid panic / infinite loop
+		head, tail = 0, 0
+		reset = true
+	}
+
+	// Ensure the head key exists so EndBlock can discover this srcChainID queue via prefix iteration.
+	if store.Get(types.XChainQueueHeadKey(srcChainID)) == nil || reset {
+		k.setXChainQueueHead(ctx, srcChainID, head)
+	}
+
+	store.Set(types.XChainQueueItemKey(srcChainID, tail), bz)
 	k.setXChainQueueTail(ctx, srcChainID, tail+1)
 	return nil
 }
@@ -198,7 +203,10 @@ func (k Keeper) ProcessXChainQueue(ctx sdk.Context, srcChainID uint64) {
 		// Process as many messages as possible from the current head batch within the budget.
 		for delivered < xchainMaxDeliveriesPerEndBlock && qb.NextIndex < uint64(len(msgs)) {
 			m := msgs[qb.NextIndex]
-			if m.ID == "" {
+			// invalid payload.
+			if m.ID == "" || m.PayloadB64 == "" ||
+				// Idempotency at execution time
+				k.HasXChainMsgProcessed(ctx, srcChainID, m.ID) {
 				// invalid; drop message and continue
 				qb.NextIndex++
 				continue
@@ -206,32 +214,44 @@ func (k Keeper) ProcessXChainQueue(ctx sdk.Context, srcChainID uint64) {
 
 			// Decode payload (kept as base64 to preserve "gateway interface unchanged").
 			var payload []byte
-			if m.PayloadB64 != "" {
-				b, err := base64.StdEncoding.DecodeString(m.PayloadB64)
-				if err != nil {
-					// invalid payload; skip this message (do not mark processed)
-					qb.NextIndex++
-					continue
-				}
-				payload = b
-			}
-
-			// Idempotency at execution time.
-			if k.HasXChainMsgProcessed(ctx, srcChainID, m.ID) {
+			b, err := base64.StdEncoding.DecodeString(m.PayloadB64)
+			if err != nil || len(b) == 0 {
+				// invalid payload; skip this message (do not mark processed)
 				qb.NextIndex++
 				continue
 			}
+			payload = b
 
 			// Deliver to gateway (budgeted). This call is the L0-replacement execution step.
 			if err := k.deliverXChainToGateway(ctx, srcChainID, qb.Batch.BatchSeq, m.ID, m.Nonce, payload); err != nil {
+				retries := k.GetXChainMsgRetryCount(ctx, srcChainID, m.ID) + 1
+				if retries > xchainMaxMsgRetries {
+					// Drop the message to unblock the queue.
+					k.SetXChainMsgProcessed(ctx, srcChainID, m.ID)
+					k.ClearXChainMsgRetryCount(ctx, srcChainID, m.ID)
+					ctx.EventManager().EmitEvent(sdk.NewEvent(
+						types.EventTypeXChainDelivery,
+						sdk.NewAttribute(types.AttributeKeyXChainSrcChainID, strconv.FormatUint(srcChainID, 10)),
+						sdk.NewAttribute(types.AttributeKeyXChainBatchSeq, strconv.FormatUint(qb.Batch.BatchSeq, 10)),
+						sdk.NewAttribute(types.AttributeKeyXChainMsgID, m.ID),
+						sdk.NewAttribute(types.AttributeKeyXChainRetryCount, strconv.FormatUint(retries, 10)),
+						sdk.NewAttribute(types.AttributeKeyReason, "xchain_delivery_failed"),
+					))
+					delivered++
+					qb.NextIndex++
+					continue
+				}
+				k.SetXChainMsgRetryCount(ctx, srcChainID, m.ID, retries)
 				// Persist progress so far, then stop and retry the failing message next EndBlock.
 				if qb.NextIndex != originalNextIndex {
+					// TODO: consider separating the nextIndex as a separate indexed value to avoid the overhead of serializing the whole batch for each message.
 					_ = k.setXChainBatch(ctx, srcChainID, idx, qb)
 				}
 				return
 			}
 
 			k.SetXChainMsgProcessed(ctx, srcChainID, m.ID)
+			k.ClearXChainMsgRetryCount(ctx, srcChainID, m.ID)
 			delivered++
 			qb.NextIndex++
 		}
@@ -245,6 +265,7 @@ func (k Keeper) ProcessXChainQueue(ctx sdk.Context, srcChainID uint64) {
 
 		// Budget exhausted (or no progress possible): persist updated nextIndex and stop this EndBlock.
 		if qb.NextIndex != originalNextIndex {
+			// TODO: NestIndex as a separate indexed value to avoid the overhead of serializing the whole batch for each message.
 			_ = k.setXChainBatch(ctx, srcChainID, idx, qb)
 		}
 		return
@@ -259,7 +280,7 @@ func (k Keeper) deliverXChainToGateway(ctx sdk.Context, srcChainID, batchSeq uin
 	// Fallback mode (unit tests / wiring not complete): emit event only.
 	if k.evmKeeper == nil {
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
-			types.EventTypeCreatePrice,
+			types.EventTypeXChainDelivery,
 			sdk.NewAttribute(types.AttributeKeyXChainSrcChainID, strconv.FormatUint(srcChainID, 10)),
 			sdk.NewAttribute(types.AttributeKeyXChainBatchSeq, strconv.FormatUint(batchSeq, 10)),
 			sdk.NewAttribute(types.AttributeKeyXChainMsgID, msgID),
@@ -291,6 +312,7 @@ func (k Keeper) deliverXChainToGateway(ctx sdk.Context, srcChainID, batchSeq uin
 		return fmt.Errorf("failed to encode gateway oracleReceive calldata: %w", err)
 	}
 
+	// TODO: set an estimate of gas cost as an upper bound.
 	const gasLimit = uint64(3_000_000)
 	msg := ethtypes.NewMessage(
 		from, &to,
@@ -314,7 +336,7 @@ func (k Keeper) deliverXChainToGateway(ctx sdk.Context, srcChainID, batchSeq uin
 
 	// Observability: emit event on successful delivery (payload bytes only).
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
-		types.EventTypeCreatePrice,
+		types.EventTypeXChainDelivery,
 		sdk.NewAttribute(types.AttributeKeyXChainSrcChainID, strconv.FormatUint(srcChainID, 10)),
 		sdk.NewAttribute(types.AttributeKeyXChainBatchSeq, strconv.FormatUint(batchSeq, 10)),
 		sdk.NewAttribute(types.AttributeKeyXChainMsgID, msgID),
