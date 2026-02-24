@@ -190,7 +190,7 @@ func TestPriceGrowID_WithAccumulateFalse(t *testing.T) {
 	// Verify accumulated price remains unchanged (still at round 4)
 	accPrice2, found := keeper.GetAccumulatedPrice(ctx, 1)
 	require.True(t, found, "accumulated price should still exist")
-	require.Equal(t, id2Uint, accPrice2.LastRoundID, "accumulated price LastRoundID should remain at 4")
+	require.Equal(t, id2Uint, accPrice2.LastRoundID, "accumulated price LastRoundID should remain at 2")
 	require.Equal(t, accPrice.Price, accPrice2.Price, "accumulated price should not change when accumulate=false")
 }
 
