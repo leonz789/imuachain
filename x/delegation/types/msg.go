@@ -91,7 +91,7 @@ func NewMsgUndelegation(instantUnbonding bool, assetID, fromAddress string, amou
 func validateDelegationInfo(assetID string, baseInfo *DelegationIncOrDecInfo) error {
 	if assetID != assetstype.ImuachainAssetID {
 		return ErrInvalidAssetID.Wrapf(
-			"only nativeToken is support, expected:%s,got:%s", assetstype.ImuachainAssetID, assetID,
+			"only nativeToken is supported, expected:%s,got:%s", assetstype.ImuachainAssetID, assetID,
 		)
 	}
 	if _, err := sdk.AccAddressFromBech32(baseInfo.FromAddress); err != nil {
