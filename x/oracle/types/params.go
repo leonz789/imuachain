@@ -741,6 +741,7 @@ func (p Params) HasTokenByName(name string, chainID uint64) (int, bool) {
 }
 
 func prefixMask(v string) (mask uint8) {
+	v = strings.ToLower(v)
 	if strings.HasPrefix(v, NSTIDPrefix) {
 		mask |= 1 << 0
 	} else if strings.HasPrefix(v, XChainIDPrefix) {
