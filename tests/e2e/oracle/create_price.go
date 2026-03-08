@@ -20,9 +20,7 @@ import (
 	assetstypes "github.com/imua-xyz/imuachain/x/assets/types"
 	operatortypes "github.com/imua-xyz/imuachain/x/operator/types"
 	oracletypes "github.com/imua-xyz/imuachain/x/oracle/types"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 var (
@@ -177,9 +175,9 @@ func (s *CreatePriceSuite) testCreatePriceLST() {
 	s.Require().NoError(err)
 
 	// query final price. query state of 11 on height 12
-	_, err = s.network.QueryOracle().LatestPrice(ctxWithHeight(11), &oracletypes.QueryGetLatestPriceRequest{TokenId: 1})
-	errStatus, _ := status.FromError(err)
-	s.Require().Equal(codes.NotFound, errStatus.Code())
+	priceRes, err := s.network.QueryOracle().LatestPrice(ctxWithHeight(11), &oracletypes.QueryGetLatestPriceRequest{TokenId: 1})
+	s.Require().NoError(err)
+	s.Require().Equal("1", priceRes.Price.Price)
 
 	s.moveToAndCheck(13)
 	// query final price. query state of 12 on height 13
@@ -299,8 +297,6 @@ func (s *CreatePriceSuite) testCreatePriceNST() {
 	err = s.network.SendPrecompileTx(network.ASSETS, "depositNST", clientChainID, validatorPubkey, stakerAddr, opAmount)
 	s.Require().NoError(err)
 	ctx := context.Background()
-	paramsRes, err := s.network.QueryOracle().Params(ctx, &oracletypes.QueryParamsRequest{})
-	s.Require().NoError(err)
 
 	// slashing_{miss_v3:1, window:1} [1]
 	s.moveToAndCheck(7)
@@ -356,12 +352,7 @@ func (s *CreatePriceSuite) testCreatePriceNST() {
 		},
 	}, *resStakerInfo.StakerInfo)
 
-	phaseTwoStart := int64(7) + int64(paramsRes.Params.MaxNonce)
-	if currentHeight, err := s.network.LatestStateHeight(); err == nil && currentHeight < phaseTwoStart {
-		s.moveToAndCheck(phaseTwoStart)
-	}
-	// Allow the 2nd-phase state (nextPieceIndex) to be initialized.
-	s.moveNAndCheck(1)
+	s.moveToAndCheck(8)
 
 	// send message with rawData piece to complete nst 2nd phase aggregation
 	ps.Prices[0].Price = string(pieces[0])

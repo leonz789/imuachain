@@ -37,12 +37,13 @@ type XChainPriceFeederSuite struct {
 
 func TestXChainPriceFeederIntegration(t *testing.T) {
 	shouldSkipXChainPriceFeederIntegration(t)
-	ensureXChainGenesis()
-	limitOracleFeedersToXChain()
+	ensureXChainGatewayGenesis()
 	cfg := network.DefaultConfig()
 	cfg.NumValidators = 1
 	cfg.CleanupDir = true
 	cfg.EnableTMLogging = true
+	oracleGen := PrepareXChainOracleGenesis(&cfg)
+	cfg.OracleGenesisState = &oracleGen
 	suite.Run(t, &XChainPriceFeederSuite{cfg: cfg})
 }
 

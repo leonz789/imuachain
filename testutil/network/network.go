@@ -49,6 +49,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/imua-xyz/imuachain/app"
+	oracletypes "github.com/imua-xyz/imuachain/x/oracle/types"
 
 	cosmoshd "github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/evmos/evmos/v16/crypto/hd"
@@ -98,6 +99,11 @@ type Config struct {
 	EnableTMLogging bool   // enable Tendermint logging to STDOUT
 	CleanupDir      bool   // remove base temporary directory during cleanup
 	PrintMnemonic   bool   // print the mnemonic of first validator as log output for testing
+
+	// OracleGenesisState overrides the oracle module genesis when building the network.
+	// When non-nil, initGenFiles uses it instead of DefaultGenStateOracle so tests (e.g. xchain)
+	// can use a custom oracle genesis without mutating the global default.
+	OracleGenesisState *oracletypes.GenesisState
 }
 
 // DefaultConfig returns a sane default configuration suitable for nearly all

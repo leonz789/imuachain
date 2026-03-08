@@ -8,11 +8,12 @@ import (
 )
 
 func TestXChainSuite(t *testing.T) {
-	ensureXChainGenesis()
-	limitOracleFeedersToXChain()
+	ensureXChainGatewayGenesis()
 	cfg := network.DefaultConfig()
 	cfg.NumValidators = 3
 	cfg.CleanupDir = true
 	cfg.EnableTMLogging = true
+	oracleGen := PrepareXChainOracleGenesis(&cfg)
+	cfg.OracleGenesisState = &oracleGen
 	suite.Run(t, NewXChainTestSuite(cfg))
 }

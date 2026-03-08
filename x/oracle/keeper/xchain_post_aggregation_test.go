@@ -61,11 +61,12 @@ func TestUpdateXChainMsgs_SeqGap(t *testing.T) {
 	k, ctx := keepertest.OracleKeeper(t)
 
 	rootHash := make([]byte, 32)
+	payload := base64.StdEncoding.EncodeToString([]byte{0x01})
 
 	batch1 := keeper.RawDataXChainBatch{
 		SrcChainID: 1,
 		BatchSeq:   1,
-		Messages:   []keeper.RawDataXChainMsg{{ID: "a", Nonce: 1, Type: "evm"}},
+		Messages:   []keeper.RawDataXChainMsg{{ID: "a", Nonce: 1, Type: "evm", PayloadB64: payload}},
 	}
 	raw1, _ := json.Marshal(batch1)
 	require.NoError(t, keeper.UpdateXChainMsgs(ctx, rootHash, raw1, 1, 1, k))
@@ -74,7 +75,7 @@ func TestUpdateXChainMsgs_SeqGap(t *testing.T) {
 	batch3 := keeper.RawDataXChainBatch{
 		SrcChainID: 1,
 		BatchSeq:   3,
-		Messages:   []keeper.RawDataXChainMsg{{ID: "b", Nonce: 3, Type: "evm"}},
+		Messages:   []keeper.RawDataXChainMsg{{ID: "b", Nonce: 3, Type: "evm", PayloadB64: payload}},
 	}
 	raw3, _ := json.Marshal(batch3)
 	err := keeper.UpdateXChainMsgs(ctx, rootHash, raw3, 1, 2, k)

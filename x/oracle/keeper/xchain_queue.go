@@ -307,6 +307,8 @@ func (k Keeper) deliverXChainToGateway(ctx sdk.Context, srcChainID, batchSeq uin
 	//   function oracleReceive(uint32 srcChainId, uint64 nonce, bytes calldata message) external;
 	//
 	// Where `message` is the original LZ payload (act + args).
+	// srcChainID is a LayerZero Endpoint ID (EID), not a native chain ID.
+	// LayerZero V2 EIDs are uint32 values (30xxx for mainnet, 40xxx for testnet).
 	calldata, err := encodeGatewayOracleReceive(uint32(srcChainID), nonce, payload)
 	if err != nil {
 		return fmt.Errorf("failed to encode gateway oracleReceive calldata: %w", err)
