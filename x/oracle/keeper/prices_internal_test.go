@@ -142,7 +142,7 @@ func TestAccumulatePriceTR_Internal(t *testing.T) {
 					RoundID: 3,
 					Decimal: 18,
 				}, true)
-				// Set up accumulated price that already includes round 4
+				// Set up accumulated price that already includes round 3
 				accPrice := types.PriceAcc{
 					Price:        "210",
 					StartRoundID: 2,

@@ -208,7 +208,7 @@ func (k Keeper) GetAllPrices(ctx sdk.Context) (list []types.Prices) {
 	return list
 }
 
-// AppenPriceTR appends a new round of price for a specific token and returns false if the roundID does not match.
+// AppendPriceTR appends a new round of price for a specific token and returns false if the roundID does not match.
 // The price round is always stored and the next round ID advanced when the roundID matches, regardless of the
 // value of accumulate. When accumulate is true, this also updates the accumulated price/TWAP state for the token;
 // when accumulate is false, no TWAP/accumulated-price updates are performed.
