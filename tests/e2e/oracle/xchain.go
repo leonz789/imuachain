@@ -279,19 +279,6 @@ func (s *XChainTestSuite) submitXChainPhaseTwoPieces(mt *oracletypes.MerkleTree,
 	}
 }
 
-// func (s *E2ETestSuite) deployOracleGateway(oracleCaller common.Address) common.Address {
-func (s *XChainTestSuite) deployOracleGateway(oracleCaller common.Address) common.Address {
-	expected := network.ExpectedOracleGatewayAddress()
-	if code, err := s.network.Validators[0].JSONRPCClient.CodeAt(context.Background(), expected, nil); err == nil && len(code) > 0 {
-		return expected
-	}
-	addr, err := s.network.DeployOracleGatewayContract(oracleCaller)
-	s.Require().NoError(err)
-	// Allow the deployment tx to be included.
-	s.moveNAndCheck(1)
-	return addr
-}
-
 func (s *XChainTestSuite) queryStakerTotalDeposited(ctx context.Context, stakerID, assetID string) sdkmath.Int {
 	res, err := s.network.QueryAssets().QueryStakerBalance(ctx, &assetstypes.QueryStakerBalanceRequest{
 		StakerId: stakerID,
