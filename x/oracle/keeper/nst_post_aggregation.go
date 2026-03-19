@@ -291,7 +291,7 @@ func (k Keeper) UpdateNSTValidatorListForStaker(ctx sdk.Context, assetID, staker
 	case types.ETHChain:
 		// currently validatorPubkey is the validator index, we don't need to check it
 	case types.BSCChain:
-		normalized, err := types.GetBSCAddressStrFromValidatorPubkeyStr(validatorPubkey)
+		normalized, err := types.NormalizeBSCAddress(validatorPubkey)
 		if err != nil {
 			return err
 		}

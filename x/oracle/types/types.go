@@ -249,26 +249,23 @@ func NSTAssetIDFromClientChainID(chainID uint64) string {
 	return ""
 }
 
-// GetBSCAddressStrFromValidatorPubkey returns the BSC address string from the validator pubkey string
-func GetBSCAddressStrFromValidatorPubkeyStr(validatorPubkey string) (string, error) {
-	s := strings.TrimSpace(validatorPubkey)
-	// allow optional 0x prefix
+// NormalizeBSCAddress normalizes a hex-encoded BSC address string.
+// The input may be a raw 20-byte address or a left-padded/longer hex string;
+// this function extracts the rightmost 20 bytes and returns the lowercase
+// 0x-prefixed result. It rejects inputs shorter than 20 bytes, non-hex
+// characters, and the zero address.
+// NOTE: this does NOT derive an address from a public key (no keccak256).
+func NormalizeBSCAddress(hexAddr string) (string, error) {
+	s := strings.TrimSpace(hexAddr)
 	s, _ = strings.CutPrefix(strings.ToLower(s), HexPrefix)
-	// must have at least 20 bytes (40 hex chars)
 	if len(s) < BSCAddressLength*2 {
-		return "", errors.New("invalid BSC validator pubkey")
+		return "", errors.New("invalid BSC address")
 	}
-	// take the right-most 20 bytes in case input is left-padded
-	s = s[len(s)-BSCAddressLength*2:]
-	addr := HexPrefix + s
-
-	if !common.IsHexAddress(addr) {
-		return "", errors.New("invalid BSC validator pubkey")
+	addr := common.HexToAddress(s)
+	if addr == (common.Address{}) {
+		return "", errors.New("invalid BSC address")
 	}
-	if common.HexToAddress(addr) == (common.Address{}) {
-		return "", errors.New("invalid BSC validator pubkey")
-	}
-	return addr, nil
+	return strings.ToLower(addr.Hex()), nil
 }
 
 // ValidSOLAddressWithPrefix validates a Solana validator pubkey encoded as hex bytes with a 0x prefix.

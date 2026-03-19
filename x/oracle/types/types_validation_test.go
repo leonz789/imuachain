@@ -39,7 +39,7 @@ func TestValidSOLAddressWithPrefix(t *testing.T) {
 	}
 }
 
-func TestGetBSCAddressStrFromValidatorPubkeyStr(t *testing.T) {
+func TestNormalizeBSCAddress(t *testing.T) {
 	tcs := []struct {
 		name string
 		addr string
@@ -86,13 +86,13 @@ func TestGetBSCAddressStrFromValidatorPubkeyStr(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := GetBSCAddressStrFromValidatorPubkeyStr(tc.addr)
+			got, err := NormalizeBSCAddress(tc.addr)
 			if tc.ok {
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
 				if got != tc.want {
-					t.Fatalf("GetBSCAddressStrFromValidatorPubkeyStr(%q)=%q, want %q", tc.addr, got, tc.want)
+					t.Fatalf("NormalizeBSCAddress(%q)=%q, want %q", tc.addr, got, tc.want)
 				}
 				return
 			}
