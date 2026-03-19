@@ -401,6 +401,8 @@ func (k Keeper) ResetAccumulatedPrice(ctx sdk.Context, tokenID uint64) {
 	store.Set(key, k.cdc.MustMarshal(&accPrice))
 }
 
+// GetTWAP retrieves the time-weighted average price for the given tokenID from the store.
+// NOTE: Non-numeric token prices (e.g. special tokens) will have no TWAP entry; callers should filter these before querying.
 func (k Keeper) GetTWAP(ctx sdk.Context, tokenID uint64) (types.PriceEpoch, bool) {
 	store := ctx.KVStore(k.storeKey)
 	key := types.PricesTWAPKey(tokenID)
