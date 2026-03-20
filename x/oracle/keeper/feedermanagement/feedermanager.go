@@ -788,7 +788,8 @@ func (f *FeederManager) updateAndCommitRoundsInRecovery(ctx sdk.Context) {
 // It is called at the start of EndBlock so that a crash after DeliverTx but before processRound does not lose 2-phase state.
 // Raw data pieces must be persisted here because the normal path only uses mem-cache; recovery restores r.m from store (GetRawDataPieces), so without this, XChain (2-phase) recovery would see round 1 differ (len(pieces) or GetRawDataPieces error).
 func (f *FeederManager) flushTwoPhaseCacheToStore(ctx sdk.Context) {
-	for _, r := range f.rounds {
+	for _, feederID := range f.sortedFeederIDs {
+		r := f.rounds[feederID]
 		if !r.twoPhases || r.m == nil || !r.m.CollectingRawData() {
 			continue
 		}
