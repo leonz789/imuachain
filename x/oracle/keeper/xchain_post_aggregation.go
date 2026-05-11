@@ -34,18 +34,12 @@ type RawDataXChainMsg struct {
 
 var _ common.PostAggregationHandler = UpdateXChainMsgs
 
-// UpdateXChainMsgs is a post-aggregation handler for oracle 2-phases "cross-chain message batch" feeders.
+// UpdateXChainMsgs is the post-aggregation handler for xchain message-batch feeders.
+// Enforces strict batch_seq (+1 per srcChainID), validates payloads, and enqueues
+// for budgeted EndBlock delivery. Errors are logged, not reverted.
 //
-// Semantics (Version 1):
-// - Enforces strict batch sequencing per srcChainID (batch_seq must equal lastAcceptedSeq+1).
-// - Validates message IDs and payload encoding.
-// - Enqueues the batch for budgeted EndBlock delivery (gateway delivery is executed later).
-//
-// NOTE: postHandler errors are only logged (they do not revert the block).
-// We additionally recover panics here (e.g. from corrupted xchain_store decode
-// in GetXChainLastSeq) and convert them to returned errors. Letting them
-// propagate would halt consensus because the postHandler is invoked inside
-// FeederManager.commitRounds without panic recovery upstream.
+// Recover converts panics (e.g. corrupted xchain_store decode) to returned errors;
+// FeederManager.commitRounds does not recover upstream.
 func UpdateXChainMsgs(
 	ctx sdk.Context,
 	rootHash []byte,
@@ -55,12 +49,11 @@ func UpdateXChainMsgs(
 ) (retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
-			ctx.Logger().Error("UpdateXChainMsgs panic recovered — batch dropped, will retry next round",
+			ctx.Logger().Error("UpdateXChainMsgs panic recovered",
 				"feederID", feederID, "roundID", roundID, "panic", r)
 			retErr = fmt.Errorf("xchain post-aggregation panic: %v", r)
 		}
 	}()
-	// Queue length cap enforced in enqueueXChainBatch via xchainMaxPendingBatchesPerSrcChain.
 	k, ok := kInf.(*Keeper)
 	if !ok {
 		return errors.New("input keeper interface type error")

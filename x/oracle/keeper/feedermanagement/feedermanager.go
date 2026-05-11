@@ -1293,9 +1293,7 @@ func (f *FeederManager) EqualsWithReason(fm *FeederManager) string {
 			return fmt.Sprintf("round %d differs (%s)", id, reason)
 		}
 	}
-	// phaseTwoCollectingFeederIDs is part of the feeder-manager snapshot
-	// (see getCheckTx / updateCheckTx); equality MUST compare it or recovery
-	// drift checks miss divergence in 2-phase collection state.
+	// phaseTwoCollectingFeederIDs is part of the snapshot (see get/updateCheckTx).
 	if len(f.phaseTwoCollectingFeederIDs) != len(fm.phaseTwoCollectingFeederIDs) {
 		return fmt.Sprintf("phaseTwoCollectingFeederIDs length %d vs %d",
 			len(f.phaseTwoCollectingFeederIDs), len(fm.phaseTwoCollectingFeederIDs))

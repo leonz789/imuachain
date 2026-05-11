@@ -7,14 +7,9 @@ import (
 	"github.com/imua-xyz/imuachain/x/oracle/types"
 )
 
-// xchain-store decoding policy:
-// A stored uint64 must always be 8 well-formed bytes (we only ever Set via
-// types.Uint64Bytes). A decode failure therefore indicates state corruption —
-// we MUST NOT silently treat it as "missing", because a corrupted lastSeq
-// would let an already-accepted batch_seq look new and bypass replay protection.
-// We panic with a descriptive message. EndBlock callers are wrapped by
-// safeRunEndBlock (endblock.go); the post-aggregation handler converts a
-// panic into a returned error (xchain_post_aggregation.go).
+// Decode failures on stored uint64 values indicate state corruption (we only
+// ever Set via types.Uint64Bytes); panic rather than masking as missing, which
+// would let an accepted batch_seq look new and bypass replay protection.
 
 func (k Keeper) GetXChainLastSeq(ctx sdk.Context, srcChainID uint64) (uint64, bool) {
 	store := ctx.KVStore(k.storeKey)

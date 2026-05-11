@@ -613,10 +613,7 @@ func NewImuachainApp(
 		&app.SlashingKeeper,
 	)
 
-	// Mempool oKeeper snapshot is performed at a single point AFTER all late-binding
-	// keeper setters (SetEVMKeeper / SetOperatorKeeper) run — see further down in this
-	// function. Keeping the snapshot to one location prevents the mempool from seeing
-	// a half-wired oracle keeper.
+	// Mempool oKeeper snapshot is performed below, after all Set*Keeper calls.
 
 	// the SDK slashing module is used to slash validators in the case of downtime. it tracks
 	// the validator signature rate and informs the staking keeper to perform the requisite
@@ -712,10 +709,8 @@ func NewImuachainApp(
 	app.OracleKeeper.SetEVMKeeper(app.EvmKeeper)
 	// Wire operator keeper for bridge checkpoint signing (EVM addr → validator power mapping).
 	app.OracleKeeper.SetOperatorKeeper(&app.OperatorKeeper)
-	// MUST be the SOLE snapshot of app.OracleKeeper into the mempool's *oKeeper. Any
-	// future Set*Keeper call introduced AFTER this line must be moved BEFORE it (or
-	// followed by another `*oKeeper = app.OracleKeeper`) — otherwise the mempool's
-	// snapshot drifts from the live keeper and tx selection sees stale state.
+	// Sole snapshot of OracleKeeper into the mempool. Any later Set*Keeper call MUST
+	// move before this line (or this snapshot must be repeated below it).
 	*oKeeper = app.OracleKeeper
 
 	// the AVS manager keeper is the AVS registry. this keeper is initialized after the EVM

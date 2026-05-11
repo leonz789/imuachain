@@ -18,23 +18,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestOutboundE2EFlow tests the full outbound lifecycle:
-//  1. Enqueue outbound messages
-//  2. Create checkpoint
-//  3. Validators sign checkpoint
-//  4. Checkpoint reaches 2/3+ power and finalizes
-//  5. Signatures can be queried for relay to client chain
-//
-// We patch dogfood's GetAllImuachainValidators so totalPower>0; otherwise the
-// production guard in AddCheckpointSignature (signedPower*3 > totalPower*2)
-// would refuse to finalize when totalPower==0.
+// TestOutboundE2EFlow walks: enqueue → checkpoint → sign → finalize → query.
 func TestOutboundE2EFlow(t *testing.T) {
 	k, ctx := keepertest.OracleKeeper(t)
 	dstChainID := uint64(101)
 
-	// 3 validators × 100 power = 300 totalPower.
-	// `signedPower*3 > totalPower*2` is strict: 2 sigs (200×3=600) tie with
-	// 300×2=600 → NOT finalized; 3 sigs (300×3=900) > 600 → finalized.
+	// 3 validators × 100 power = 300 total. Strict 2/3 (`signedPower*3 > totalPower*2`):
+	// 2 sigs (600 == 600) NOT finalized; 3 sigs (900 > 600) finalized.
 	const numVals = 3
 	privKeys := make([]*ecdsa.PrivateKey, numVals)
 	addrs := make([]common.Address, numVals)
@@ -58,7 +48,7 @@ func TestOutboundE2EFlow(t *testing.T) {
 	)
 	defer patcher.Reset()
 
-	// Step 1: Enqueue outbound messages (simulating what deliverXChainToGateway does)
+	// Step 1: enqueue messages
 	msg1 := keeper.OutboundMsg{
 		DstChainID: dstChainID,
 		SeqNum:     1,
@@ -80,7 +70,7 @@ func TestOutboundE2EFlow(t *testing.T) {
 	msgs := k.GetOutboundMessages(ctx, dstChainID, 0, 100)
 	require.Len(t, msgs, 2)
 
-	// Step 2: Create checkpoint
+	// Step 2: create checkpoint
 	created := k.CreateCheckpointForPendingOutbound(ctx, dstChainID)
 	require.True(t, created)
 
@@ -93,7 +83,7 @@ func TestOutboundE2EFlow(t *testing.T) {
 	require.Equal(t, uint64(1), cp.SeqStart)
 	require.Equal(t, uint64(2), cp.SeqEnd)
 
-	// Step 3: Each validator signs the checkpoint; verify threshold behavior.
+	// Step 3: each validator signs
 	checkpointHash := types.ComputeCheckpointHash(cp.Nonce, cp.DstChainID, cp.MessagesHash)
 	ethHash := types.ComputeEthSignedMessageHash(checkpointHash)
 	for i := 0; i < numVals; i++ {
@@ -108,25 +98,23 @@ func TestOutboundE2EFlow(t *testing.T) {
 		finalized, err := k.AddCheckpointSignature(ctx, dstChainID, 1, addrs[i], v, r, s, 100)
 		require.NoError(t, err)
 
-		// Strict 2/3 inequality means only the 3rd signature (300 power) crosses
-		// the threshold against totalPower=300.
 		if i < numVals-1 {
-			require.False(t, finalized, "should not finalize before reaching strict 2/3 of total power (sig %d)", i+1)
+			require.False(t, finalized, "sig %d should not cross strict 2/3 yet", i+1)
 		} else {
-			require.True(t, finalized, "should finalize when all 3 validators have signed (300 > 200)")
+			require.True(t, finalized, "sig %d should finalize", i+1)
 		}
 	}
 
-	// Step 4: Verify checkpoint is finalized
+	// Step 4: checkpoint finalized
 	cp, found = k.GetCheckpoint(ctx, dstChainID, 1)
 	require.True(t, found)
-	require.True(t, cp.Finalized, "checkpoint should be finalized after validator signatures")
+	require.True(t, cp.Finalized)
 
-	// Step 5: Verify signatures can be queried
+	// Step 5: signatures queryable
 	sigs := k.GetCheckpointSignatures(ctx, dstChainID, 1)
-	require.Len(t, sigs, numVals, "all submitted signatures should be stored")
+	require.Len(t, sigs, numVals)
 
-	t.Logf("Outbound E2E flow completed: %d messages, checkpoint nonce=%d, %d signatures, finalized=%v",
+	t.Logf("Outbound E2E: %d messages, nonce=%d, %d sigs, finalized=%v",
 		len(msgs), nonce, len(sigs), cp.Finalized)
 }
 

@@ -80,25 +80,11 @@ func (ms msgServer) resolveValidatorPower(ctx sdk.Context, evmAddr common.Addres
 	return ms.fallbackAveragePower(ctx)
 }
 
-// GetImuachainValidator looks up a validator by consensus address via the dogfood keeper.
-// Returns (validator, found). Panics are recovered to handle nil keepers in tests.
-// imuachainValidatorInfo is a minimal struct to hold validator power.
 type imuachainValidatorInfo struct {
 	Power int64
 }
 
 func (ms msgServer) getImuachainValidatorByConsAddr(ctx sdk.Context, consAddr sdk.ConsAddress) (imuachainValidatorInfo, bool) {
-	// Recover is defensive: GetAllImuachainValidators can panic when the dogfood keeper
-	// is nil (unit-test wiring) or when its internal state is malformed. Surfacing the
-	// panic up would halt consensus inside a msg server, so we recover and log loudly
-	// (Error level) instead of swallowing — operators must see this if it ever fires
-	// in production.
-	defer func() {
-		if r := recover(); r != nil {
-			ctx.Logger().Error("getImuachainValidatorByConsAddr recovered from panic",
-				"consAddr", consAddr.String(), "error", r)
-		}
-	}()
 	validators := ms.GetAllImuachainValidators(ctx)
 	for _, v := range validators {
 		if sdk.ConsAddress(v.Address).Equals(consAddr) {
@@ -108,14 +94,8 @@ func (ms msgServer) getImuachainValidatorByConsAddr(ctx sdk.Context, consAddr sd
 	return imuachainValidatorInfo{}, false
 }
 
+// fallbackAveragePower is the test-only path when operatorKeeper is not wired.
 func (ms msgServer) fallbackAveragePower(ctx sdk.Context) int64 {
-	// Test-only path (production wires operatorKeeper); recover guards against nil
-	// dogfood keeper. Log loudly so a panic firing in production is not invisible.
-	defer func() {
-		if r := recover(); r != nil {
-			ctx.Logger().Error("fallbackAveragePower recovered from panic", "error", r)
-		}
-	}()
 	validators := ms.GetAllImuachainValidators(ctx)
 	if len(validators) == 0 {
 		return 0

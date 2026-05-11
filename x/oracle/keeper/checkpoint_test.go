@@ -2,15 +2,32 @@ package keeper_test
 
 import (
 	"encoding/hex"
+	"reflect"
 	"testing"
 
+	"github.com/agiledragon/gomonkey/v2"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	keepertest "github.com/imua-xyz/imuachain/testutil/keeper"
+	dogfoodkeeper "github.com/imua-xyz/imuachain/x/dogfood/keeper"
+	dogfoodtypes "github.com/imua-xyz/imuachain/x/dogfood/types"
 	"github.com/imua-xyz/imuachain/x/oracle/keeper"
 	"github.com/imua-xyz/imuachain/x/oracle/types"
 	"github.com/stretchr/testify/require"
 )
+
+// patchDogfoodValidators stubs GetAllImuachainValidators against the zero-value
+// dogfood keeper in keepertest.OracleKeeper. Caller defers the returned Reset.
+func patchDogfoodValidators(vals []dogfoodtypes.ImuachainValidator) *gomonkey.Patches {
+	return gomonkey.ApplyMethod(
+		reflect.TypeOf(dogfoodkeeper.Keeper{}),
+		"GetAllImuachainValidators",
+		func(_ dogfoodkeeper.Keeper, _ sdk.Context) []dogfoodtypes.ImuachainValidator {
+			return vals
+		},
+	)
+}
 
 func TestCheckpointCreation(t *testing.T) {
 	k, ctx := keepertest.OracleKeeper(t)
@@ -85,6 +102,15 @@ func TestCheckpointSignatureVerification(t *testing.T) {
 	require.NoError(t, err)
 	evmAddr := crypto.PubkeyToAddress(privKey.PublicKey)
 
+	// Stub a 3-validator set (total=300). One sig (power=100) stays under the
+	// strict 2/3 threshold so the checkpoint remains pending for idempotency assertion.
+	patcher := patchDogfoodValidators([]dogfoodtypes.ImuachainValidator{
+		{Address: evmAddr.Bytes(), Power: 100},
+		{Address: []byte{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd}, Power: 100},
+		{Address: []byte{0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00, 0xff, 0xee, 0xdd, 0xcc}, Power: 100},
+	})
+	defer patcher.Reset()
+
 	// Enqueue and create checkpoint
 	msg := keeper.OutboundMsg{
 		DstChainID: 101, SeqNum: 1, Nonce: 1,
@@ -107,12 +133,9 @@ func TestCheckpointSignatureVerification(t *testing.T) {
 	copy(s[:], sig[32:64])
 	v := uint8(sig[64] + 27)
 
-	// Submit signature (with mock power)
 	finalized, err := k.AddCheckpointSignature(ctx, 101, 1, evmAddr, v, r, s, 100)
 	require.NoError(t, err)
-	// Not finalized yet because we need 2/3 of total power
-	// (testutil keeper may have 0 total validator power, so this may finalize immediately)
-	_ = finalized
+	require.False(t, finalized, "single sig of 100/300 power must not cross strict 2/3")
 
 	// Verify signature is stored
 	sigs := k.GetCheckpointSignatures(ctx, 101, 1)
